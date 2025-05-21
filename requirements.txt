@@ -1,2 +1,3 @@
 # Core dependencies for the MCP server
 fastmcp
+requests

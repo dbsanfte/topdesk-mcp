@@ -6,8 +6,7 @@
 			"label": "Run MCP Server",
 			"command": "python",
 			"args": [
-				"-m",
-				"topdesk_mcp"
+				"main.py"
 			],
 			"group": "build",
 			"isBackground": false,
