@@ -37,14 +37,12 @@ class utils:
                 self._partial_content_container = []
                 return placeHolder
         elif response.status_code == 404:
-            print ("status_code {}, message: {}".format('404', 'Not Found'))
-            return
+            raise ValueError("status_code {}, message: {}".format('404', 'Not Found'))
         elif response.status_code == 204:
             print ("status_code {}, message: {}".format('204', 'No content'))
-            return "success"
+            return "Success"
         elif response.status_code == 405:
-            print ("status_code {}, message: {}".format('405', 'Method not allowed'))
-            return
+            raise ValueError("status_code {}, message: {}".format('405', 'Method not allowed'))
         # Partial content returned.
         elif response.status_code == 206:
             # can we make this recursive?
@@ -67,12 +65,9 @@ class utils:
             status_code = response.status_code
             response = response.json()
             if 'errors' in response:
-                print ("status_code {}, message: {}".format(status_code, response['errors'][0]['errorMessage']))
+                raise Exception("status_code {}, message: {}".format(status_code, response['errors'][0]['errorMessage']))
             else:
-                print ("status_code {}, message: {}".format(status_code, response[0]['message']))
-            
-            #return {"status_code" : self.status_code, "message" : self.response[0]['message']}
-            return
+                raise Exception("status_code {}, message: {}".format(status_code, response[0]['message']))
     
     def request_topdesk(self, uri, archived=None, page_size=None, query=None, custom_uri=None, extended_uri=None):
         headers = {'Authorization':"Basic {}".format(self._credpair), "Accept":'application/json'}
