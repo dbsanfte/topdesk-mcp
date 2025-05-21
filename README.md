@@ -75,6 +75,7 @@ topdesk_mcp/  # Directory for the MCP server package
 ## References
 - [MCP Protocol Documentation](https://modelcontextprotocol.io/llms-full.txt)
 - [TOPdeskPy SDK](https://github.com/TwinkelToe/TOPdeskPy)
+- [FastMCP](https://github.com/jlowin/fastmcp)
 
 ## License
 MIT license.
