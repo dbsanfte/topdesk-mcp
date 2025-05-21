@@ -285,7 +285,8 @@ def unarchive_person(person_id: str) -> dict:
 
 def main():
     """Main function to run the MCP server."""
-    mcp.run('sse', host='0.0.0.0', port=3030)
+    #mcp.run('sse', host='0.0.0.0', port=3030)
+    mcp.run()
 
 if __name__ == "__main__":
     main()
