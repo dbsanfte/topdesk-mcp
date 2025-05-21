@@ -6,7 +6,7 @@
       "args": [
         "--from", 
         "git+https://github.com/dbsanfte/topdesk-mcp",
-        "topdesk_mcp"
+        "topdesk-mcp"
       ],
     }
   }
