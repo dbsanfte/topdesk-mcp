@@ -29,7 +29,7 @@ This project is a Model Context Protocol (MCP) server implemented in Python. It 
 ```
 
 ## Setup for Local Development
-1. Ensure Python 3.8+ is installed.
+1. Ensure Python 3.11+ is installed.
 2. Create and activate a virtual environment:
 
    **PowerShell:**
@@ -50,7 +50,10 @@ This project is a Model Context Protocol (MCP) server implemented in Python. It 
    uv pip install -r requirements.txt
    ```
    
-4. You're ready to go.
+4. Run:
+   ```
+   python -m topdesk_mcp.main
+   ```
    
 ### Notes:
 * The server skeleton was generated using the official MCP server template.
