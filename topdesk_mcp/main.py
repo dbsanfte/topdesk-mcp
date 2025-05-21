@@ -177,5 +177,9 @@ def unarchive_person(person_id: str) -> dict:
     """Unarchive a TOPdesk person."""
     return topdesk_client.person.unarchive(person_id)
 
-if __name__ == "__main__":
+def main():
+    """Main function to run the MCP server."""
     mcp.run()
+
+if __name__ == "__main__":
+    main()
