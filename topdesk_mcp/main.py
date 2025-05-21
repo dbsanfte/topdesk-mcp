@@ -45,67 +45,121 @@ def get_object_schemas() -> str:
 #################
 @mcp.tool()
 def get_incident(incident_id: str) -> dict:
-    """Get a TOPdesk incident by UUID or by Incident Number (I-xxxxxx-xxx). Both formats are accepted."""
+    """Get a TOPdesk incident by UUID or by Incident Number (I-xxxxxx-xxx). Both formats are accepted.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident to retrieve.
+    """
     return topdesk_client.incident.get(incident_id)
 
 @mcp.tool()
 def get_incidents_by_fiql_query(query: str) -> list:
-    """Get TOPdesk incidents by FIQL query."""
+    """Get TOPdesk incidents by FIQL query.
+
+    Parameters:
+        query: The FIQL query string to filter incidents.
+    """
     return topdesk_client.incident.get_list(query=query)
 
 @mcp.tool()
 def get_incident_user_requests(incident_id: str) -> list:
-    """Get all user requests on a TOPdesk incident."""
+    """Get all user requests on a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident whose requests to retrieve.
+    """
     return topdesk_client.incident.request.get_list(incident_id=incident_id)
 
 @mcp.tool()
 def create_incident(caller_id: str, incident_fields: dict) -> dict:
-    """Create a new TOPdesk incident."""
+    """Create a new TOPdesk incident.
+
+    Parameters:
+        caller_id: The ID of the caller creating the incident.
+        incident_fields: A dictionary of fields for the new incident.
+    """
     return topdesk_client.incident.create(caller=caller_id, **incident_fields)
 
 @mcp.tool()
 def archive_incident(incident_id: str) -> dict:
-    """Archive a TOPdesk incident."""
+    """Archive a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident to archive.
+    """
     return topdesk_client.incident.archive(incident_id)
 
 @mcp.tool()
 def unarchive_incident(incident_id: str) -> dict:
-    """Unarchive a TOPdesk incident."""
+    """Unarchive a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident to unarchive.
+    """
     return topdesk_client.incident.unarchive(incident_id)
 
 @mcp.tool()
 def get_timespent_on_incident(incident_id: str) -> list:
-    """Get all time spent entries for a TOPdesk incident."""
+    """Get all time spent entries for a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident.
+    """
     return topdesk_client.incident.timespent.get(incident_id=incident_id)
 
 @mcp.tool()
 def register_timespent_on_incident(incident_id: str, time_spent: int) -> dict:
-    """Register time spent on a TOPdesk incident."""
+    """Register time spent on a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident.
+        time_spent: Time spent in minutes.
+    """
     return topdesk_client.incident.timespent.register(incident_id=incident_id, time_spent=time_spent)
 
 @mcp.tool()
 def escalate_incident(incident_id: str, reason_id: str) -> dict:
-    """Escalate a TOPdesk incident."""
+    """Escalate a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident to escalate.
+        reason_id: The ID of the escalation reason.
+    """
     return topdesk_client.incident.escalate(incident=incident_id, reason=reason_id)
 
 @mcp.tool()
 def get_available_escalation_reasons() -> list:
-    """Get all available escalation reasons for a TOPdesk incident."""
+    """Get all available escalation reasons for a TOPdesk incident.
+
+    (No parameters)
+    """
     return topdesk_client.incident.escalation_reasons()
 
 @mcp.tool()
 def get_available_deescalation_reasons() -> list:
-    """Get all available de-escalation reasons for a TOPdesk incident."""
+    """Get all available de-escalation reasons for a TOPdesk incident.
+
+    (No parameters)
+    """
     return topdesk_client.incident.deescalation_reasons()
 
 @mcp.tool()
 def deescalate_incident(incident_id: str, reason_id: str) -> dict:
-    """De-escalate a TOPdesk incident."""
+    """De-escalate a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident to de-escalate.
+        reason_id: The ID of the de-escalation reason.
+    """
     return topdesk_client.incident.deescalate(incident=incident_id, reason_id=reason_id)
 
 @mcp.tool()
 def get_progress_trail(incident_id: str) -> list:
-    """Get the progress trail for a TOPdesk incident."""
+    """Get the progress trail for a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident.
+    """
     return topdesk_client.incident.get_progress_trail(incident_id=incident_id)
 
 ##################
@@ -113,17 +167,31 @@ def get_progress_trail(incident_id: str) -> list:
 ##################
 @mcp.tool()
 def get_operatorgroups(archived: bool = False, page_size: int = 100, query: str = None) -> list:
-    """Get a list of TOPdesk operator groups, optionally by FIQL query or leave blank to return all groups."""
+    """Get a list of TOPdesk operator groups, optionally by FIQL query or leave blank to return all groups.
+
+    Parameters:
+        archived: Whether to include archived groups.
+        page_size: Number of results per page.
+        query: Optional FIQL query string.
+    """
     return topdesk_client.operator.get_operatorgroups(archived=archived, page_size=page_size, query=query)
 
 @mcp.tool()
 def get_operator(operator_id: str) -> dict:
-    """Get a TOPdesk operator by ID."""
+    """Get a TOPdesk operator by ID.
+
+    Parameters:
+        operator_id: The ID of the TOPdesk operator to retrieve.
+    """
     return topdesk_client.operator.get(operator_id)
 
 @mcp.tool()
 def get_operators_by_fiql_query(query: str) -> list:
-    """Get TOPdesk operators by FIQL query."""
+    """Get TOPdesk operators by FIQL query.
+
+    Parameters:
+        query: The FIQL query string to filter operators.
+    """
     return topdesk_client.operator.get_list(query=query)
 
 ##################
@@ -131,17 +199,31 @@ def get_operators_by_fiql_query(query: str) -> list:
 ##################
 @mcp.tool()
 def add_action_to_incident(incident_id: str, text: str) -> dict:
-    """Add an action (ie, reply/comment) to a TOPdesk incident."""
+    """Add an action (ie, reply/comment) to a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident.
+        text: The content of the action to add.
+    """
     return topdesk_client.incident.patch(incident_id, action=text)
 
 @mcp.tool()
 def get_incident_actions(incident_id: str) -> list:
-    """Get all actions (ie, replies/comments) for a TOPdesk incident."""
+    """Get all actions (ie, replies/comments) for a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident.
+    """
     return topdesk_client.incident.action.get_list(incident_id=incident_id)
 
 @mcp.tool()
 def delete_incident_action(incident_id: str, action_id: str) -> dict:
-    """Delete a specific action (ie, reply/comment) for a TOPdesk incident."""
+    """Delete a specific action (ie, reply/comment) for a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident.
+        action_id: The ID of the action to delete.
+    """
     return topdesk_client.incident.action.delete(incident_id=incident_id, action_id=action_id)
 
 ################
@@ -149,32 +231,58 @@ def delete_incident_action(incident_id: str, action_id: str) -> dict:
 ################
 @mcp.tool()
 def get_person_by_query(query: str) -> list:
-    """Get TOPdesk persons by FIQL query."""
+    """Get TOPdesk persons by FIQL query.
+
+    Parameters:
+        query: The FIQL query string to filter persons.
+    """
     return topdesk_client.person.get_list(query=query)
 
 @mcp.tool()
 def get_person(person_id: str) -> dict:
-    """Get a TOPdesk person by ID."""
+    """Get a TOPdesk person by ID.
+
+    Parameters:
+        person_id: The ID of the TOPdesk person to retrieve.
+    """
     return topdesk_client.person.get(person_id)
 
 @mcp.tool()
 def create_person(person: dict) -> dict:
-    """Create a new TOPdesk person."""
+    """Create a new TOPdesk person.
+
+    Parameters:
+        person: A dictionary of person fields to create.
+    """
     return topdesk_client.person.create(**person)
 
 @mcp.tool()
 def update_person(person_id: str, updated_fields: dict) -> dict:
-    """Update an existing TOPdesk person."""
+    """Update an existing TOPdesk person.
+
+    Parameters:
+        person_id: The ID of the TOPdesk person to update.
+        updated_fields: A dictionary of fields to update.
+    """
     return topdesk_client.person.update(person_id, **updated_fields)
 
 @mcp.tool()
 def archive_person(person_id: str, reason_id: str = None) -> dict:
-    """Archive a TOPdesk person."""
+    """Archive a TOPdesk person.
+
+    Parameters:
+        person_id: The ID of the TOPdesk person to archive.
+        reason_id: Optional ID of the archive reason.
+    """
     return topdesk_client.person.archive(person_id, reason_id=reason_id)
 
 @mcp.tool()
 def unarchive_person(person_id: str) -> dict:
-    """Unarchive a TOPdesk person."""
+    """Unarchive a TOPdesk person.
+
+    Parameters:
+        person_id: The ID of the TOPdesk person to unarchive.
+    """
     return topdesk_client.person.unarchive(person_id)
 
 def main():
