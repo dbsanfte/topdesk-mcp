@@ -1,0 +1,4 @@
+topdesk-mcp/fastmcp-README.md
+topdesk-mcp/src
+**/__pycache__
+**/.pytest_cache

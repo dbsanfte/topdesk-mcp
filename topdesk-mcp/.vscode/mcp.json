@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "topdesk-mcp": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from", 
+        "git+https://github.com/dbsanfte/topdesk-mcp",
+        "topdesk_mcp"
+      ],
+    }
+  }
+}

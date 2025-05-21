@@ -1,0 +1,2618 @@
+from fastmcp import FastMCP
+from topdesk_mcp import _topdesk_sdk as topdesk_sdk
+import os
+
+# Load config from environment variables
+TOPDESK_URL = os.environ.get("TOPDESK_URL")
+TOPDESK_USERNAME = os.environ.get("TOPDESK_USERNAME")
+TOPDESK_PASSWORD = os.environ.get("TOPDESK_PASSWORD")
+
+if not (TOPDESK_URL and TOPDESK_USERNAME and TOPDESK_PASSWORD):
+    raise RuntimeError("Missing TOPdesk credentials. Set TOPDESK_URL, TOPDESK_USERNAME, and TOPDESK_PASSWORD as environment variables.")
+
+# Initialize TOPdesk SDK
+topdesk = topdesk_sdk.connect(TOPDESK_URL, TOPDESK_USERNAME, TOPDESK_PASSWORD)
+
+mcp = FastMCP("TOPdesk MCP Server")
+
+###################
+# HINTS
+###################
+@mcp.tool()
+def get_fiql_query_howto() -> str:
+    """Get a hint on how to construct FIQL queries, with examples."""
+    return (
+        '''
+        # FIQL Query Hints
+
+        FIQL (Feed Item Query Language) is a query language that allows you to filter and search for items in TOPdesk.
+        It uses a simple syntax to specify the criteria for the items you want to retrieve.
+
+        ## The following operations are available:
+
+        * field==value: Equals. Not available for memo values.
+        * field!=value: Not equal. Not available for memo values.
+        * field==null: Is null. Special case of Equals, works for all field types.
+        * field!=null: Is not null. Special case of Not equal, works for all field types.
+        * field=gt=value: Greater than. Only available for numeric and date values.
+        * field=ge=value: Greater than or equal. Only available for numeric and date values.
+        * field=lt=value: Less than. Only available for numeric and date values.
+        * field=le=value: Less than or equal. Only available for numeric and date values.
+        * field=sw=value: Starts with. Only available for text and memo values.
+        * field=in=(oneValue,otherValue): In list. For querying resources that have one of several values, for example all reservations and requests. Not available for memo values.
+        * field=out=(oneValue,otherValue): Not in list. For querying resources that don't have one of several values, for example all reservations except cancelled and rejected ones. Not available for memo values.
+        * oneCondition;otherCondition: And operation. Conditions can be and-ed together using a `;`.
+        * oneCondition,otherCondition: Or operation. Conditions can be or-ed together using a `,`.
+        * You can use brackets to group `and`/`or` sets together. By default, `and` takes precedence.
+
+        ## A `value` can be specified without quoting or escaping, unless it contains a white space or reserved character.
+
+        * String values can be quoted using either ' or ".
+        * If you need to use both single and double quotes inside a quoted argument, then you must escape one of them using \ (backslash).
+        * If you want to use \ literally, then double it as \\. Backslash has a special meaning only inside a quoted argument, not in unquoted argument.
+        * The reserved characters are ' " ( ) ; , = ! ~ > >.
+        * Date values can be specified using ISO 8601 format which is yyyy-MM-ddTHH:mm:ssZ. The time zone can be specified as Z for UTC, or as offset +/-0900 or +/-01:00.
+
+        ## FIQL query examples for Incidents:
+
+        * `creationDate=lt=2014-01-01T00:00:00Z`: All incidents created before 1st January 2014 UTC.
+        * `modifictionDate=ge=2014-01-01T00:00:00Z;modifictionDate=lt=2014-02-01T00:00:00Z`: All incidents modified between 1st January 2014 and 1st February 2014 UTC.
+        * `caller.name=='John Doe'`: All incidents where the caller's name is John Doe.
+        * `operator.name=='Jane Smith'`: All incidents where the operator's name is Jane Smith.
+        * `operatorGroup.name=in=(IT Support,HR)`: All incidents where the operator group is either IT Support or HR.
+        * 'status=secondLine;impact.name=Department`: All incidents where the status is second line and the impact is Department level.
+        '''
+    )
+
+##################
+# SCHEMAS
+##################
+mcp.tool()
+def get_object_schemas() -> str:
+    """Get the full object schemas for TOPdesk incidents and all their subfields."""
+    return ('''
+---
+schemas:
+  Incident:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+        example: f197bb75-8822-45e9-82ce-02983504020b
+      status:
+        type: string
+        enum:
+        - firstLine
+        - secondLine
+        - partial
+        - firstLineArchived
+        - secondLineArchived
+        - partialArchived
+      number:
+        type: string
+        example: I-250520-058
+      request:
+        type: string
+        description: The request text that caused the incident without any formatting.
+        x-reporting-ignore: true
+      requests:
+        type: string
+        description: The list endpoint where the separate request entries can be retrieved
+          with html formatting.
+        format: url
+        x-reporting-ignore: true
+      action:
+        type: string
+        description: The list endpoint where the separate action entries can be retrieved
+          with html formatting.
+        format: url
+        x-reporting-ignore: true
+      attachments:
+        type: string
+        description: The list endpoint where the attachments can be retrieved.
+        format: url
+        x-reporting-ignore: true
+      caller:
+        "$ref": "#/schemas/Caller"
+      callerBranch:
+        type: object
+        description: The branch of the caller.
+        allOf:
+        - "$ref": "#/schemas/Branch"
+        x-reporting-ignore: true
+      callerLocation:
+        type: object
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+      branchExtraFieldA:
+        type: object
+        description: The extraA field of the callerBranch
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+        x-reporting-ignore: true
+      branchExtraFieldB:
+        type: object
+        description: The extraB field of the callerBranch
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+        x-reporting-ignore: true
+      briefDescription:
+        type: string
+        x-reporting-ignore: true
+      externalNumber:
+        maxLength: 60
+        type: string
+        description: |
+          External number.
+          Can only be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+      category:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+            x-reporting:
+              reference: IncidentCategory
+              referencePath: category
+              reversePath: incidents
+          name:
+            type: string
+      subcategory:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+            x-reporting:
+              reference: IncidentSubcategory
+              referencePath: subcategory
+              reversePath: incidents
+          name:
+            type: string
+      callType:
+        "$ref": "#/schemas/Searchlist"
+      entryType:
+        "$ref": "#/schemas/Searchlist"
+      object:
+        "$ref": "#/schemas/Object"
+      asset:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+      branch:
+        "$ref": "#/schemas/Branch"
+      location:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          branch:
+            "$ref": "#/schemas/Branch"
+          name:
+            type: string
+          room:
+            type: string
+            x-reporting-ignore: true
+      impact:
+        "$ref": "#/schemas/Searchlist"
+      urgency:
+        "$ref": "#/schemas/Searchlist"
+      priority:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+            x-reporting:
+              reference: IncidentPriority
+              referencePath: priority
+              reversePath: incidents
+          name:
+            type: string
+      duration:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+            x-reporting:
+              reference: IncidentDuration
+              referencePath: duration
+              reversePath: incidents
+          name:
+            type: string
+      actualDuration:
+        type: number
+        description: Actual duration in minutes
+      targetDate:
+        type: string
+        format: date-time
+      sla:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          responseTargetDate:
+            type: string
+            format: date-time
+          targetDate:
+            type: string
+            format: date-time
+      responseDate:
+        type: string
+        format: date-time
+      onHold:
+        type: boolean
+      onHoldDate:
+        type: string
+        format: date-time
+      onHoldDuration:
+        type: number
+      feedbackMessage:
+        type: string
+        x-reporting-ignore: true
+      feedbackRating:
+        type: number
+      operator:
+        "$ref": "#/schemas/Operator"
+      operatorGroup:
+        "$ref": "#/schemas/Searchlist"
+      supplier:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+          forFirstLine:
+            type: boolean
+            x-reporting-ignore: true
+          forSecondLine:
+            type: boolean
+            x-reporting-ignore: true
+      processingStatus:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+            x-reporting:
+              reference: IncidentProcessingStatus
+              referencePath: processingStatus
+              reversePath: incidents
+          name:
+            type: string
+      completed:
+        type: boolean
+      completedDate:
+        type: string
+        format: date-time
+      closed:
+        type: boolean
+      closedDate:
+        type: string
+        format: date-time
+      closureCode:
+        "$ref": "#/schemas/Searchlist"
+      timeSpent:
+        type: number
+        description: "The total time registered on this incident. Including when the
+          incident was 1st line, 2nd line and, if this\nincident is a second line
+          incident, all time registered on partials belonging to it.  \nFor partial
+          incident this field will be 0 as their time is added to the timeSpent of
+          their parent incident.  \nThe time is returned as minutes.\n"
+      timeSpentFirstLine:
+        type: number
+        description: "Time registered on this incident while it was a 1st line incident.
+          \ \nThe time is returned as minutes.\n"
+      timeSpentSecondLine:
+        type: number
+        description: "Time registered on this incident while it was a 2nd line incident.
+          \ \nThe time is returned as minutes.\n"
+      timeSpentPartial:
+        type: number
+        description: "Time registered on this incident while it was a partial incident.
+          \ \nThe time is returned as minutes.\n"
+      timeSpentLinkedPartials:
+        type: number
+        description: "Time registered on partials belonging to this incident.  \nThe
+          time is returned as minutes.\n"
+      timeSpentSecondLineAndPartials:
+        type: number
+        description: |
+          WARNING: This name is very misleading as the field will not contain the time registered on partials.
+          DEPRECATED: Use _timeSpentSecondLine_ instead.
+      itemCosts:
+        type: number
+      objectCosts:
+        type: number
+      costs:
+        type: number
+      escalationStatus:
+        type: string
+        enum:
+        - Escalated
+        - Deescalated
+      escalationReason:
+        "$ref": "#/schemas/Searchlist"
+      escalationOperator:
+        "$ref": "#/schemas/Searchlist"
+      callDate:
+        type: string
+        format: date-time
+      creator:
+        "$ref": "#/schemas/Searchlist"
+      creationDate:
+        type: string
+        format: date-time
+      modifier:
+        "$ref": "#/schemas/Searchlist"
+      modificationDate:
+        type: string
+        format: date-time
+      archivingReason:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+      majorCall:
+        type: boolean
+      majorCallObject:
+        type: object
+        properties:
+          name:
+            type: string
+          id:
+            type: string
+            format: uuid
+          status:
+            type: number
+            x-reporting-ignore: true
+          majorIncident:
+            type: boolean
+            x-reporting-ignore: true
+      publishToSsd:
+        type: boolean
+      monitored:
+        type: boolean
+      responded:
+        type: boolean
+      expectedTimeSpent:
+        type: number
+      mainIncident:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+            x-reporting:
+              reference: Incident
+              referencePath: mainIncident
+              reversePath: partials
+          number:
+            type: string
+      partialIncidents:
+        type: array
+        items:
+          type: object
+          properties:
+            link:
+              type: string
+      optionalFields1:
+        "$ref": "#/schemas/OptionalFields"
+      optionalFields2:
+        "$ref": "#/schemas/OptionalFields"
+      externalLinks:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+            date:
+              type: string
+              format: date-time
+  Caller:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      dynamicName:
+        type: string
+      email:
+        type: string
+      mobileNumber:
+        type: string
+      phoneNumber:
+        type: string
+      branch:
+        "$ref": "#/schemas/Branch"
+      department:
+        type: object
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+      budgetHolder:
+        type: object
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+  Branch:
+    type: object
+    properties:
+      clientReferenceNumber:
+        type: string
+        x-reporting-ignore: true
+      timeZone:
+        type: string
+        x-reporting-ignore: true
+      extraA:
+        type: object
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+        x-reporting-ignore: true
+      extraB:
+        type: object
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+        x-reporting-ignore: true
+      id:
+        type: string
+        format: uuid
+      name:
+        type: string
+  Searchlist:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      name:
+        type: string
+  Object:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      name:
+        type: string
+      type:
+        type: object
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+        x-reporting-ignore: true
+      make:
+        type: object
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+        x-reporting-ignore: true
+      model:
+        type: object
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+        x-reporting-ignore: true
+      branch:
+        type: object
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+        x-reporting-ignore: true
+      location:
+        type: object
+        allOf:
+        - "$ref": "#/schemas/Searchlist"
+        x-reporting-ignore: true
+      specification:
+        type: string
+        x-reporting-ignore: true
+      serialNumber:
+        type: string
+        x-reporting-ignore: true
+  Operator:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      status:
+        type: string
+        enum:
+        - operator
+        - operatorGroup
+        - operatorArchived
+        - operatorGroupArchived
+      name:
+        type: string
+  OptionalFields:
+    type: object
+    properties:
+      boolean1:
+        type: boolean
+        description: One of five possible boolean fields
+        example: true
+      boolean2:
+        type: boolean
+        description: One of five possible boolean fields
+        example: true
+      boolean3:
+        type: boolean
+        description: One of five possible boolean fields
+        example: true
+      boolean4:
+        type: boolean
+        description: One of five possible boolean fields
+        example: true
+      boolean5:
+        type: boolean
+        description: One of five possible boolean fields
+        example: true
+      number1:
+        type: number
+        description: One of five possible number fields
+        example: 54
+      number2:
+        type: number
+        description: One of five possible number fields
+        example: 54
+      number3:
+        type: number
+        description: One of five possible number fields
+        example: 54
+      number4:
+        type: number
+        description: One of five possible number fields
+        example: 54
+      number5:
+        type: number
+        description: One of five possible number fields
+        example: 54
+      text1:
+        type: string
+        description: One of five possible text fields
+        example: this is some text
+      text2:
+        type: string
+        description: One of five possible text fields
+        example: this is some text
+      text3:
+        type: string
+        description: One of five possible text fields
+        example: this is some text
+      text4:
+        type: string
+        description: One of five possible text fields
+        example: this is some text
+      text5:
+        type: string
+        description: One of five possible text fields
+        example: this is some text
+      memo1:
+        type: string
+        description: One of five possible memo fields
+        example: "26-02-2016 08:44 [GMT +1:00] Meadows, D. Sr.: \nMemo1"
+      memo2:
+        type: string
+        description: One of five possible memo fields
+        example: "26-02-2016 08:44 [GMT +1:00] Meadows, D. Sr.: \nMemo2"
+      memo3:
+        type: string
+        description: One of five possible memo fields
+        example: "26-02-2016 08:44 [GMT +1:00] Meadows, D. Sr.: \nMemo3"
+      memo4:
+        type: string
+        description: One of five possible memo fields
+        example: "26-02-2016 08:44 [GMT +1:00] Meadows, D. Sr.: \nMemo4"
+      memo5:
+        type: string
+        description: One of five possible memo fields
+        example: "26-02-2016 08:44 [GMT +1:00] Meadows, D. Sr.: \nMemo5"
+      date1:
+        type: string
+        description: One of five possible date fields
+        format: date-time
+      date2:
+        type: string
+        description: One of five possible date fields
+        format: date-time
+      date3:
+        type: string
+        description: One of five possible date fields
+        format: date-time
+      date4:
+        type: string
+        description: One of five possible date fields
+        format: date-time
+      date5:
+        type: string
+        description: One of five possible date fields
+        format: date-time
+      searchlist1:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+        description: One of five possible searchlist fields. Currently the name of
+          the dropdown item will not be displayed.
+      searchlist2:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+        description: One of five possible searchlist fields. Currently the name of
+          the dropdown item will not be displayed.
+      searchlist3:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+        description: One of five possible searchlist fields. Currently the name of
+          the dropdown item will not be displayed.
+      searchlist4:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+        description: One of five possible searchlist fields. Currently the name of
+          the dropdown item will not be displayed.
+      searchlist5:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+        description: One of five possible searchlist fields. Currently the name of
+          the dropdown item will not be displayed.
+    description: The enabled optional fields.
+  Duration:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      name:
+        type: string
+      basicPeriods:
+        type: number
+      timeSpanType:
+        type: string
+      inFirstLine:
+        type: boolean
+      inSecondLine:
+        type: boolean
+  Priority:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      name:
+        type: string
+      firstLineDuration:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+      secondLineDuration:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+  ProcessingStatus:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      name:
+        type: string
+      onHold:
+        type: string
+      processingState:
+        type: string
+      response:
+        type: string
+      default:
+        type: boolean
+  IncidentCategory:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      name:
+        type: string
+  IncidentSubcategory:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      name:
+        type: string
+      category:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+  TimeRegistration:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      timeSpent:
+        type: integer
+        description: Time spent in seconds.
+        format: int64
+      notes:
+        type: string
+      status:
+        "$ref": "#/schemas/IncidentStatus"
+      entryDate:
+        type: string
+        format: date-time
+      creationDate:
+        type: string
+        format: date-time
+      operator:
+        "$ref": "#/schemas/Searchlist"
+      operatorGroup:
+        "$ref": "#/schemas/Searchlist"
+      reason:
+        "$ref": "#/schemas/Searchlist"
+      parent:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+            x-reporting:
+              reference: Incident
+              referencePath: incident
+              reversePath: timeRegistrations
+          status:
+            "$ref": "#/schemas/IncidentStatus"
+      creator:
+        "$ref": "#/schemas/Searchlist"
+      modifier:
+        "$ref": "#/schemas/Searchlist"
+  IncidentCreateBody:
+    type: object
+    properties:
+      caller:
+        "$ref": "#/schemas/CallerCreate"
+      callerLookup:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Lookup value for filling in a registered caller's contact details.
+          Can only be set by operators.
+          Cannot be provided for partials as its automatically copied from the main incident.
+          The caller is filled in automatically for persons.
+          Examples:
+          ```
+          "callerLookup" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "callerLookup" : { "email" : "email@domain.com" }
+          ```
+          It is an error to provide more than one lookup value or to provide an empty callerLookup object.
+      status:
+        type: string
+        description: 'Status of the incident. Can only be set by operators.
+
+          '
+        default: firstLine
+        enum:
+        - firstLine
+        - secondLine
+        - partial
+      briefDescription:
+        maxLength: 80
+        type: string
+        description: |
+          Brief description.
+          Can be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+          Can be set by persons only when the appropriate setting for the new call form is checked.
+      request:
+        type: string
+        description: |
+          Initial request.
+          The following html tags can be used to format the text:
+          <ul>
+          <li>&lt;i&gt;</li>
+          <li>&lt;em&gt;</li>
+          <li>&lt;b&gt;</li>
+          <li>&lt;strong&gt;</li>
+          <li>&lt;u&gt;</li>
+          <li>&lt;img&gt; BASE64-encoding has to be used. Only pictures up to the size of 450x450 pixels are supported. Allowed picture-formats: gif, png, bmp, pcx, iff, ras, pnm, psd, jpg. Example: &lt;img src="data:image/png;base64,iVBORw0KGgoAAA..."&gt;</li>
+          <li>&lt;br&gt;</li>
+          <li>&lt;h5&gt;</li>
+          <li>&lt;h6&gt;</li>
+          </ul>
+          Can be set by operators and persons.
+      action:
+        type: string
+        description: |
+          Initial action.
+          The following html tags can be used to format the text:
+          <ul>
+          <li>&lt;i&gt;</li>
+          <li>&lt;em&gt;</li>
+          <li>&lt;b&gt;</li>
+          <li>&lt;strong&gt;</li>
+          <li>&lt;u&gt;</li>
+          <li>&lt;img&gt; BASE64-encoding has to be used. Only pictures up to the size of 450x450 pixels are supported. Allowed picture-formats: gif, png, bmp, pcx, iff, ras, pnm, psd, jpg. Example: &lt;img src="data:image/png;base64,iVBORw0KGgoAAA..."&gt;</li>
+          <li>&lt;br&gt;</li>
+          <li>&lt;h5&gt;</li>
+          <li>&lt;h6&gt;</li>
+          </ul>
+          Can be set by operators and persons.
+      actionInvisibleForCaller:
+        type: boolean
+        description: |
+          Whether the initial action is invisible for persons.
+          Can only be set by operators.
+        default: false
+      entryType:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Entry type by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "entryType" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "entryType" : { "name" : "Name of Searchlist" }
+          ```
+      callType:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Call type by id or name.
+          Can be set by operators.
+          Cannot be provided for partials as its automatically copied from the main incident.
+          Can be set by persons only when the appropriate setting for the new call form is checked.
+          Example:
+          ```
+          "callType" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "callType" : { "name" : "Name of Searchlist" }
+          ```
+      category:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Category by id or name.
+          Can be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+          Can be set by persons only when the appropriate setting for the new call form is checked.
+          It is an error to provide both an id and a name.
+          Example:
+          ```
+          "category" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "category" : { "name" : "Name of Searchlist" }
+          ```
+      subcategory:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Subcategory by id or name.
+          Can be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+          Can be set by persons only when the appropriate setting for the new call form is checked.
+          It is an error to provide both an id and a name. If a subcategory is provided without a category, the corresponding category will be filled in automatically, unless there are multiple matching categories, in which case the request will fail.
+          Examples:
+          ```
+          "subcategory" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "subcategory" : { "name" : "Printer" }
+          ```
+      externalNumber:
+        maxLength: 60
+        type: string
+        description: |
+          External number.
+          Can only be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+      object:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Object by id or by name.
+          Can only be set by operators.
+          For partial incidents, this field is determined by the main incident and will give an error if provided in the request.
+          Examples:
+          ```
+          "object" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "object" : { "name" : "OBJ001" }
+          ```
+          If both object and location are given, object is set and location is ignored.
+      location:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Location by id.
+          Can only be set by operators.
+          For partial incidents, this field is determined by the main incident and will give an error if provided in the request.
+          Example:
+          ```
+          "location" : { "id" : "<UUID>" }
+          ```
+      branch:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Branch (for Location) by id.
+          Can only be set by operators.
+          For partial incidents, this field is determined by the main incident and will give an error if provided in the request.
+          Example:
+          ```
+          "branch" : { "id" : "<UUID>" }
+          ```
+      mainIncident:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Either id or name can be used to specify incident
+            format: uuid
+          number:
+            type: string
+            description: Either name or id can be used to specify incident
+        description: |
+          Main incident id or number, required for creating a partial incident.
+          This must be an open, unarchived second line incident and visible to the operator.
+          It is an error to provide a main incident for non-partial incidents.
+          Can only be set by operators.
+          example:
+          ```
+          "mainIncident" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "mainIncident" : { "number" : "I 1909 123" }
+          ```
+      impact:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Impact by id or name.
+          Can only be set by operators.
+          Cannot be provided for partials as its automatically copied from the main incident.
+          Example:
+          ```
+          "impact" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "impact" : { "name" : "Name of Searchlist" }
+          ```
+      urgency:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Urgency by id or name.
+          Can only be set by operators.
+          Cannot be provided for partials as its automatically copied from the main incident.
+          Example:
+          ```
+          "urgency" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "urgency" : { "name" : "Name of Searchlist" }
+          ```
+      priority:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Priority by id or name.
+          Can only be set by operators.
+          Cannot be provided for partials as its automatically copied from the main incident.
+          Will be automatically filled in if you provide impact and/or urgency leading to a unique priority according to your priority matrix, and the same request doesn't provide a priority. For incidents with a linked SLA, if the priority provided cannot be found in the Service Level Priority List, the duration field of the incident will be emptied.
+          Example:
+          ```
+          "priority" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "priority" : { "name" : "Name of Searchlist" }
+          ```
+      duration:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Duration by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "duration" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "duration" : { "name" : "Name of Searchlist" }
+          ```
+      targetDate:
+        type: string
+        description: |
+          Target date.
+          Can only be set by operators.
+          Example:
+          ```
+          "targetDate" : "2015-11-15T14:00:00.000+0200"
+          ```
+          The given time offset will be used. Without a given offset Zulu/UTC time will be assumed. E.g. 2015-10-28T10:30:00.000 is equivalent to 2015-10-28T10:30:00.000+0000
+        format: date-time
+      sla:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          SLA by id.
+          Can only be set by operators.
+          Example:
+          ```
+          "sla" : { "id" : "<UUID>" }
+          ```
+      onHold:
+        type: boolean
+        description: |
+          On hold. On hold date will be filled accordingly.
+          Can only be set by operators.
+          Example:
+          ```
+          "onHold" : "true"
+          ```
+      operator:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Operator by id.
+          Can only be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+          Example:
+          ```
+          "operator": { "id": "<UUID>" }
+          ```
+      operatorGroup:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Operator group by id.
+          Can be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+          Can be set by persons only when the appropriate setting for the new call form is checked.
+          Example:
+          ```
+          "operatorGroup" : { "id" : "<UUID>" }
+          ```
+      supplier:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Supplier by id.
+          Can only be set by operators.
+          Example:
+          ```
+          "supplier" : { "id" : "<UUID>" }
+          ```
+      processingStatus:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Processing status by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "processingStatus" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "processingStatus" : { "name" : "Name of Searchlist" }
+          ```
+      responded:
+        type: boolean
+        description: |
+          Whether the incident is responded.
+          SLM-licence is needed.
+          Can only be set by operators. When the setting "Status determines responded" is on, this will be filled automatically (manual setting is prohibited).
+      responseDate:
+        type: string
+        description: |
+          Response date.
+          SLM-licence is needed.
+          Can only be set by operators.
+          Will automatically be set to current date if left out and "responded : true" is set.
+          Example:
+          ```
+          "responseDate" : "2015-11-15T14:00:00.000+0200"
+          ```
+          The given time offset will be used. Without a given offset Zulu/UTC time will be assumed. E.g. 2015-10-28T10:30:00.000 is equivalent to 2015-10-28T10:30:00.000+0000
+        format: date-time
+      completed:
+        type: boolean
+        description: |
+          Whether the incident is completed.
+          Can only be set by operators.
+      completedDate:
+        type: string
+        description: |
+          Completed date.
+          Can only be set by operators.
+          Example: "completedDate" : "2018-11-15T14:00:00.000+0200"
+          The given time offset will be used. Without a given offset Zulu/UTC time will be assumed. E.g. 2018-10-28T10:30:00.000 is equivalent to 2018-10-28T10:30:00.000+0000
+        format: date-time
+      closed:
+        type: boolean
+        description: |
+          Whether the incident is closed.
+          Can only be set by operators.
+          For partials, will be ignored. The value of completed will be used instead.
+      closedDate:
+        type: string
+        description: |
+          Closed date.
+          Can only be set by operators.
+          For partials, will be ignored. The value of completedDate will be used instead.
+          Example: "closedDate" : "2018-11-15T14:00:00.000+0200"
+          The given time offset will be used. Without a given offset Zulu/UTC time will be assumed. E.g. 2018-10-28T10:30:00.000 is equivalent to 2018-10-28T10:30:00.000+0000
+        format: date-time
+      closureCode:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Closure code by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "closureCode" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "closureCode" : { "name" : "Name of Searchlist" }
+          ```
+      costs:
+        type: number
+        description: |
+          Costs.
+          Can only be set by operators.
+          Example: "costs" : "0.15"
+        format: float
+        example: 0.15
+      feedbackRating:
+        type: number
+        description: |
+          Rate incident, only available for closed incidents.
+          Can only be set by operators or the caller of the incident.
+          Example:
+          ```
+          "feedbackRating" : "5"
+          ```
+        format: int32
+        example: 2
+      feedbackMessage:
+        type: string
+        description: |
+          Leave feedback message on incident, only available for closed incidents and when feedbackRating is given.
+          Can only be set by operators or the caller of the incident.
+          Example:
+          ```
+          "feedbackMessage" : "Nice!"
+          ```
+      majorCall:
+        type: boolean
+        description: |
+          Whether the incident is a major call.
+          Can only be set by operators.
+      majorCallObject:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Major call by id or number.
+          Can only be set by operators.
+          Example:
+          ```
+          "majorCallObject" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "majorCallObject" : { "name" : "I 1909 123" }
+          ```
+      publishToSsd:
+        type: boolean
+        description: |
+          Whether the incident should be published in the Self Service Desk; only major incidents can be published.
+          Can only be set by operators.
+      optionalFields1:
+        "$ref": "#/schemas/OptionalFields"
+      optionalFields2:
+        "$ref": "#/schemas/OptionalFields"
+      externalLink:
+        "$ref": "#/schemas/ExternalLink"
+  DropdownCreate:
+    type: object
+    properties:
+      id:
+        type: string
+        description: Id of item. Either id or name can be used to specify item.
+        format: uuid
+      name:
+        type: string
+        description: Name of item. Either name or id can be used to specify item.
+  IncidentUpdateBody:
+    type: object
+    properties:
+      caller:
+        "$ref": "#/schemas/CallerCreate"
+      callerLookup:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Lookup value for filling in a registered caller's contact details.
+          Can only be set by operators.
+          Cannot be provided for partials as its automatically copied from the main incident.
+          The caller is filled in automatically for persons.
+          Examples:
+          ```
+          "callerLookup" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "callerLookup" : { "email" : "email@domain.com" }
+          ```
+          It is an error to provide more than one lookup value or to provide an empty callerLookup object.
+      briefDescription:
+        maxLength: 80
+        type: string
+        description: |
+          Brief description.
+          Can be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+          Can be set by persons only when the appropriate setting for the new call form is checked.
+      request:
+        type: string
+        description: |
+          Initial request.
+          The following html tags can be used to format the text:
+          <ul>
+          <li>&lt;i&gt;</li>
+          <li>&lt;em&gt;</li>
+          <li>&lt;b&gt;</li>
+          <li>&lt;strong&gt;</li>
+          <li>&lt;u&gt;</li>
+          <li>&lt;img&gt; BASE64-encoding has to be used. Only pictures up to the size of 450x450 pixels are supported. Allowed picture-formats: gif, png, bmp, pcx, iff, ras, pnm, psd, jpg. Example: &lt;img src="data:image/png;base64,iVBORw0KGgoAAA..."&gt;</li>
+          <li>&lt;br&gt;</li>
+          <li>&lt;h5&gt;</li>
+          <li>&lt;h6&gt;</li>
+          </ul>
+          Can be set by operators and persons.
+      action:
+        type: string
+        description: |
+          Initial action.
+          The following html tags can be used to format the text:
+          <ul>
+          <li>&lt;i&gt;</li>
+          <li>&lt;em&gt;</li>
+          <li>&lt;b&gt;</li>
+          <li>&lt;strong&gt;</li>
+          <li>&lt;u&gt;</li>
+          <li>&lt;img&gt; BASE64-encoding has to be used. Only pictures up to the size of 450x450 pixels are supported. Allowed picture-formats: gif, png, bmp, pcx, iff, ras, pnm, psd, jpg. Example: &lt;img src="data:image/png;base64,iVBORw0KGgoAAA..."&gt;</li>
+          <li>&lt;br&gt;</li>
+          <li>&lt;h5&gt;</li>
+          <li>&lt;h6&gt;</li>
+          </ul>
+          Can be set by operators and persons.
+      actionInvisibleForCaller:
+        type: boolean
+        description: |
+          Whether the initial action is invisible for persons.
+          Can only be set by operators.
+        default: false
+      entryType:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Entry type by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "entryType" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "entryType" : { "name" : "Name of Searchlist" }
+          ```
+      callType:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Call type by id or name.
+          Can be set by operators.
+          Cannot be provided for partials as its automatically copied from the main incident.
+          Can be set by persons only when the appropriate setting for the new call form is checked.
+          Example:
+          ```
+          "callType" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "callType" : { "name" : "Name of Searchlist" }
+          ```
+      callDate:
+        type: string
+        description: |
+          The date when this call was registed. Usually that's the same as when the incident was created, but it can be
+          useful to change it e.g. when registering a call that came in yesterday.
+          Example:
+          ```
+          "callDate" : "2015-11-15T14:00:00.000+0200"
+          ```
+        format: date-time
+      category:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Call type by id or name.
+          Can be set by operators.
+          Cannot be provided for partials as its automatically copied from the main incident.
+          Can be set by persons only when the appropriate setting for the new call form is checked.
+          Example:
+          ```
+          "callType" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "callType" : { "name" : "Name of Searchlist" }
+          ```
+      subcategory:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Subcategory by id or name.
+          Can be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+          Can be set by persons only when the appropriate setting for the new call form is checked.
+          It is an error to provide both an id and a name. If a subcategory is provided without a category, the corresponding category will be filled in automatically, unless there are multiple matching categories, in which case the request will fail.
+          Examples:
+          ```
+          "subcategory" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "subcategory" : { "name" : "Printer" }
+          ```
+      externalNumber:
+        maxLength: 60
+        type: string
+        description: |
+          External number.
+          Can only be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+      object:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Object by id or by name.
+          Can only be set by operators.
+          For partial incidents, this field is determined by the main incident and will give an error if provided in the request.
+          Examples:
+          ```
+          "object" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "object" : { "name" : "OBJ001" }
+          ```
+          If both object and location are given, object is set and location is ignored.
+      location:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Location by id.
+          Can only be set by operators.
+          For partial incidents, this field is determined by the main incident and will give an error if provided in the request.
+          Example:
+          ```
+          "location" : { "id" : "<UUID>" }
+          ```
+      branch:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Branch (for Location) by id.
+          Can only be set by operators.
+          For partial incidents, this field is determined by the main incident and will give an error if provided in the request.
+          Example:
+          ```
+          "branch" : { "id" : "<UUID>" }
+          ```
+      impact:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Impact by id or name.
+          Can only be set by operators.
+          Cannot be provided for partials as its automatically copied from the main incident.
+          Example:
+          ```
+          "impact" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "impact" : { "name" : "Name of Searchlist" }
+          ```
+      urgency:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Urgency by id or name.
+          Can only be set by operators.
+          Cannot be provided for partials as its automatically copied from the main incident.
+          Example:
+          ```
+          "urgency" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "urgency" : { "name" : "Name of Searchlist" }
+          ```
+      priority:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Priority by id or name.
+          Can only be set by operators.
+          Cannot be provided for partials as its automatically copied from the main incident.
+          Will be automatically filled in if you provide impact and/or urgency leading to a unique priority according to your priority matrix, and the same request doesn't provide a priority. For incidents with a linked SLA, if the priority provided cannot be found in the Service Level Priority List, the duration field of the incident will be emptied.
+          Example:
+          ```
+          "priority" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "priority" : { "name" : "Name of Searchlist" }
+          ```
+      duration:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Duration by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "duration" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "duration" : { "name" : "Name of Searchlist" }
+          ```
+      targetDate:
+        type: string
+        description: |
+          Target date.
+          Can only be set by operators.
+          Example:
+          ```
+          "targetDate" : "2015-11-15T14:00:00.000+0200"
+          ```
+          The given time offset will be used. Without a given offset Zulu/UTC time will be assumed. E.g. 2015-10-28T10:30:00.000 is equivalent to 2015-10-28T10:30:00.000+0000
+        format: date-time
+      sla:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          SLA by id.
+          Can only be set by operators.
+          Example:
+          ```
+          "sla" : { "id" : "<UUID>" }
+          ```
+      onHold:
+        type: boolean
+        description: |
+          On hold. On hold date will be filled accordingly.
+          Can only be set by operators.
+          Example:
+          ```
+          "onHold" : "true"
+          ```
+      operator:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Operator by id.
+          Can only be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+          Example:
+          ```
+          "operator": { "id": "<UUID>" }
+          ```
+      operatorGroup:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Operator group by id.
+          Can be set by operators.
+          For partials, if not provided, will be automatically copied from the main incident.
+          Can be set by persons only when the appropriate setting for the new call form is checked.
+          Example:
+          ```
+          "operatorGroup" : { "id" : "<UUID>" }
+          ```
+      supplier:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Supplier by id.
+          Can only be set by operators.
+          Example:
+          ```
+          "supplier" : { "id" : "<UUID>" }
+          ```
+      processingStatus:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Processing status by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "processingStatus" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "processingStatus" : { "name" : "Name of Searchlist" }
+          ```
+      responded:
+        type: boolean
+        description: |
+          Whether the incident is responded.
+          SLM-licence is needed.
+          Can only be set by operators. When the setting "Status determines responded" is on, this will be filled automatically (manual setting is prohibited).
+      responseDate:
+        type: string
+        description: |
+          Response date.
+          SLM-licence is needed.
+          Can only be set by operators.
+          Will automatically be set to current date if left out and "responded : true" is set.
+          Example:
+          ```
+          "responseDate" : "2015-11-15T14:00:00.000+0200"
+          ```
+          The given time offset will be used. Without a given offset Zulu/UTC time will be assumed. E.g. 2015-10-28T10:30:00.000 is equivalent to 2015-10-28T10:30:00.000+0000
+        format: date-time
+      completed:
+        type: boolean
+        description: |
+          Whether the incident is completed.
+          Can only be set by operators.
+      completedDate:
+        type: string
+        description: |
+          Completed date.
+          Can only be set by operators.
+          Example: "completedDate" : "2018-11-15T14:00:00.000+0200"
+          The given time offset will be used. Without a given offset Zulu/UTC time will be assumed. E.g. 2018-10-28T10:30:00.000 is equivalent to 2018-10-28T10:30:00.000+0000
+        format: date-time
+      closed:
+        type: boolean
+        description: |
+          Whether the incident is closed.
+          Can only be set by operators.
+          For partials, will be ignored. The value of completed will be used instead.
+      closedDate:
+        type: string
+        description: |
+          Closed date.
+          Can only be set by operators.
+          For partials, will be ignored. The value of completedDate will be used instead.
+          Example: "closedDate" : "2018-11-15T14:00:00.000+0200"
+          The given time offset will be used. Without a given offset Zulu/UTC time will be assumed. E.g. 2018-10-28T10:30:00.000 is equivalent to 2018-10-28T10:30:00.000+0000
+        format: date-time
+      closureCode:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Closure code by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "closureCode" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "closureCode" : { "name" : "Name of Searchlist" }
+          ```
+      costs:
+        type: number
+        description: |
+          Costs.
+          Can only be set by operators.
+          Example: "costs" : "0.15"
+        format: float
+        example: 0.15
+      feedbackRating:
+        type: number
+        description: |
+          Rate incident, only available for closed incidents.
+          Can only be set by operators or the caller of the incident.
+          Example:
+          ```
+          "feedbackRating" : "5"
+          ```
+        format: int32
+        example: 2
+      feedbackMessage:
+        type: string
+        description: |
+          Leave feedback message on incident, only available for closed incidents and when feedbackRating is given.
+          Can only be set by operators or the caller of the incident.
+          Example:
+          ```
+          "feedbackMessage" : "Nice!"
+          ```
+      majorCall:
+        type: boolean
+        description: |
+          Whether the incident is a major call.
+          Can only be set by operators.
+      majorCallObject:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the item. Either id or name can be used to specify
+              item.
+            format: uuid
+          name:
+            type: string
+            description: Name of the item. Either name or id can be used to specify
+              item.
+        description: |
+          Major call by id or number.
+          Can only be set by operators.
+          Example:
+          ```
+          "majorCallObject" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "majorCallObject" : { "name" : "I 1909 123" }
+          ```
+      publishToSsd:
+        type: boolean
+        description: |
+          Whether the incident should be published in the Self Service Desk; only major incidents can be published.
+          Can only be set by operators.
+      optionalFields1:
+        "$ref": "#/schemas/OptionalFields"
+      optionalFields2:
+        "$ref": "#/schemas/OptionalFields"
+      externalLink:
+        "$ref": "#/schemas/ExternalLink"
+  ExternalLink:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      type:
+        type: string
+        description: |
+          Integer (supplied as string) to identify the external system by.
+          Can only be set by operators. Needs to be supplied together with a valid id in order to create a link.
+          Example: "externalLink" : { "id" : "identifier-of-external-system", "type" : "11" }
+      date:
+        type: string
+        description: |
+          Date of the last synchronization.
+          Can only be set by operators.
+          Example: "externalLink" : { "id" : "identifier-of-external-system", "type" : "11" , "date" : "2018-09-17T17:36:00" }
+        format: datae-time
+  CallerCreate:
+    type: object
+    properties:
+      branch:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          The caller branch by id.
+          Can only be set by operators.
+          Example:
+          ```
+          "caller" : { "branch" : { "id" : "<UUID>" }}
+          ```
+      dynamicName:
+        maxLength: 109
+        type: string
+        description: |
+          Dynamic Name of the caller.
+          Can only be set by operators.
+          Can only be changed for unregistered callers.
+          Example:
+          ```
+          "caller" : { "dynamicName" : "Ginneken, Erik van" }
+          ```
+      phoneNumber:
+        maxLength: 25
+        type: string
+        description: |
+          Phone number of the caller.
+          Can only be set by operators.
+          Example:
+          ```
+          "caller" : { "phoneNumber" : "123 456" }
+          ```
+      mobileNumber:
+        maxLength: 25
+        type: string
+        description: |
+          Mobile phone number of the caller.
+          Can only be set by operators.
+          Example:
+          ```
+          "caller" : { "mobileNumber" : "123 456" }
+          ```
+      email:
+        maxLength: 100
+        type: string
+        description: |
+          Email of the caller.
+          Can only be set by operators.
+          Example:
+          ```
+          "caller" : { "email" : "erikg@topdesk.com" }
+          ```
+      department:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Either id or name can be used to specify department.
+            format: uuid
+          name:
+            type: string
+            description: Either name or id can be used to specify department.
+        description: |
+          Department of the caller by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "caller" : { "department" : { "id" : "<UUID>" }}
+          ```
+          or
+          ```
+          "department" : { "name" : "Name of Searchlist" }
+          ```
+      location:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Location of the caller by id.
+          Can only be set by operators.
+          Example:
+          ```
+          "caller" : { "location" : { "id" : "<UUID>" }
+          ```
+      budgetHolder:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Either id or name can be used to specify budgetHolder.
+            format: uuid
+          name:
+            type: string
+            description: Either name or id can be used to specify budgetHolder.
+        description: |
+          Budget holder of the caller by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "caller" : { "budgetHolder" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "budgetHolder" : { "name" : "Name of Searchlist" }
+          ```
+      personExtraFieldA:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Either id or name can be used to specify personExtraFieldA.
+            format: uuid
+          name:
+            type: string
+            description: Either name or id can be used to specify personExtraFieldA.
+        description: |
+          Person extra field a of the caller by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "caller" : { "personExtraFieldA" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "personExtraFieldA" : { "name" : "Name of Searchlist" }
+          ```
+      personExtraFieldB:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Either id or name can be used to specify personExtraFieldB.
+            format: uuid
+          name:
+            type: string
+            description: Either name or id can be used to specify personExtraFieldB.
+        description: |
+          Person extra field b of the caller by id or name.
+          Can only be set by operators.
+          Example:
+          ```
+          "caller" : { "personExtraFieldB" : { "id" : "<UUID>" }
+          ```
+          or
+          ```
+          "personExtraFieldB" : { "name" : "Name of Searchlist" }
+          ```
+    description: |
+      ```
+      Using the caller parameter to fill in a registered caller is deprecated, use the callerLookup parameter instead.
+      ```
+      The caller contact details for this incident.
+      Can only be set by operators.
+      Cannot be provided for partials as its automatically copied from the main incident.
+      Is filled in automatically for persons and when the callerLookup parameter is provided.
+      To fill in an unregistered caller, fill in the caller's name:
+      ```
+      "caller" : { "dynamicName" : "Firstname Lastname" }
+      ```
+      It is an error to provide both a name and a registered caller.
+  ProgressTrail:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      memoText:
+        type: string
+        description: '_NOTE_: only for text
+
+          '
+      flag:
+        type: number
+        description: '_NOTE_: only for text
+
+          '
+      invisibleForCaller:
+        type: boolean
+        description: '_NOTE_: only for text
+
+          '
+      entryDate:
+        type: string
+        format: date-time
+      operator:
+        "$ref": "#/schemas/Searchlist"
+      person:
+        "$ref": "#/schemas/Searchlist"
+      fileName:
+        type: string
+        description: '_NOTE_: only for attachment
+
+          '
+      downloadUrl:
+        type: string
+        description: '_NOTE_: only for attachment
+
+          '
+      size:
+        type: number
+        description: '_NOTE_: only for attachment
+
+          '
+        format: int32
+      user:
+        "$ref": "#/schemas/Searchlist"
+      title:
+        type: string
+        description: '_NOTE_: only for Email
+
+          '
+      sender:
+        type: string
+        description: '_NOTE_: only for Email
+
+          '
+      plainText:
+        type: string
+        description: '_NOTE_: only for text
+
+          '
+      creationDate:
+        type: string
+        description: '_NOTE_: only for text
+
+          '
+        format: date-time
+  Attachment:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      invisibleForCaller:
+        type: boolean
+        description: '_NOTE_: only available for operators
+
+          '
+      entryDate:
+        type: string
+        format: date-time
+      operator:
+        "$ref": "#/schemas/Searchlist"
+      person:
+        "$ref": "#/schemas/Searchlist"
+      fileName:
+        type: string
+      downloadUrl:
+        type: string
+        description: '_NOTE_: only for attachment
+
+          '
+      size:
+        type: number
+        format: int32
+      description:
+        type: string
+        example: Photo of screen
+  Request:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      memoText:
+        type: string
+        description: '_NOTE_: only for text
+
+          '
+      plainText:
+        type: string
+        description: '_NOTE_: only for text
+
+          '
+      flag:
+        type: number
+        description: '_NOTE_: only for text
+
+          '
+      entryDate:
+        type: string
+        format: date-time
+      operator:
+        "$ref": "#/schemas/Searchlist"
+      person:
+        "$ref": "#/schemas/Searchlist"
+      creationDate:
+        type: string
+        description: '_NOTE_: only for text
+
+          '
+        format: date-time
+  Action:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      memoText:
+        type: string
+        description: '_NOTE_: only for text
+
+          '
+      plainText:
+        type: string
+        description: '_NOTE_: only for text
+
+          '
+      flag:
+        type: number
+        description: '_NOTE_: only for text
+
+          '
+      invisibleForCaller:
+        type: boolean
+        description: '_NOTE_: only for text
+
+          '
+      entryDate:
+        type: string
+        format: date-time
+      operator:
+        "$ref": "#/schemas/Searchlist"
+      person:
+        "$ref": "#/schemas/Searchlist"
+      creationDate:
+        type: string
+        description: '_NOTE_: only for text
+
+          '
+        format: date-time
+  TimeSpent:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      timeSpent:
+        type: integer
+        description: Time spent in minutes
+        format: int64
+      notes:
+        type: string
+      status:
+        type: number
+        format: int32
+      entryDate:
+        type: string
+        format: date-time
+      creationDate:
+        type: string
+        format: date-time
+      operator:
+        "$ref": "#/schemas/Searchlist"
+      operatorGroup:
+        "$ref": "#/schemas/Searchlist"
+      reason:
+        "$ref": "#/schemas/Searchlist"
+  CreateTimeSpent:
+    required:
+    - timeSpent
+    type: object
+    properties:
+      timeSpent:
+        type: integer
+        description: |
+          Time spent in minutes. Can be negative as long as the total registered time on the incident does not go
+          below 0. Can not be 0.
+          Example: `"timeSpent": 30`
+        format: int64
+      notes:
+        maxLength: 250
+        type: string
+        description: |
+          Notes for the entry of registered time spent
+          Example: `"notes": "Took a bit longer to find a patch than expected."`
+      entryDate:
+        type: string
+        description: |
+          Date for when the time spent should be registered. If not set, will be set to the current time.
+          Example: `"entryDate": : "2015-11-15T14:00:00.000+0200"`
+          The given time offset will be used. Without a given offset Zulu/UTC time will be assumed.
+          E.g. 2015-10-28T10:30:00.000 is equivalent to 2015-10-28T10:30:00.000+0000
+        format: date-time
+      operator:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Operator by id. If operator group and operator id is not set, currently logged in operator will be used.
+          Example: `"operator" : { "id" : "<UUID>" }`
+      operatorGroup:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+        description: |
+          Operator group by id. Must match with the specified operator. If no operator specified, operator group will
+          also be set as the operator.
+          Example: `"operatorGroup" : { "id" : "<UUID>" }`
+      reason:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          name:
+            type: string
+        description: |
+          The reason for the time spent by name or id. If id is set the name will be ignored.
+          Example: `"reason" : { "id" : "<UUID>" }` or `"reason" : { "name" : "Normal tariff" }`
+  SlaService:
+    type: object
+    properties:
+      id:
+        type: string
+        description: The id of the SLA service. This is the value you need to link
+          a SLA to an incident while creating or updating it.
+        format: uuid
+      contractId:
+        type: string
+        format: uuid
+      contractName:
+        type: string
+      contractSequenceNumber:
+        type: string
+      serviceId:
+        type: string
+        format: uuid
+      serviceName:
+        type: string
+      serviceLevelId:
+        type: string
+        format: uuid
+      serviceLevelName:
+        type: string
+  IncidentStatus:
+    type: object
+    enum:
+    - firstLine
+    - secondLine
+    - partial
+    - firstLineArchived
+    - secondLineArchived
+    - partialArchived
+    - 
+    ''')
+
+#################
+# INCIDENTS
+#################
+@mcp.tool()
+def get_incident(incident_id: str) -> dict:
+    """Get a TOPdesk incident by UUID or by Incident Number (I-xxxxxx-xxx). Both formats are accepted."""
+    return topdesk_sdk._incident.incident.get(incident_id)
+
+@mcp.tool()
+def get_incidents_by_fiql_query(query: str) -> list:
+    """Get TOPdesk incidents by FIQL query."""
+    return topdesk_sdk._incident.incident.get_list(query=query)
+
+@mcp.tool()
+def get_incident_requests(incident_id: str) -> list:
+    """Get all user requests for a TOPdesk incident."""
+    return topdesk_sdk._incident.incident._request.get_list(incident_id=incident_id)
+
+@mcp.tool()
+def get_incident_request(incident_id: str, request_id: str) -> dict:
+    """Get a specific user request for a TOPdesk incident."""
+    return topdesk_sdk._incident.incident._request.get(incident_id=incident_id, request_id=request_id)
+
+@mcp.tool()
+def delete_incident_request(incident_id: str, request_id: str) -> dict:
+    """Delete a specific user request for a TOPdesk incident."""
+    return topdesk_sdk._incident.incident._request.delete(incident_id=incident_id, request_id=request_id)
+
+@mcp.tool()
+def create_incident(caller_id: str, **kwargs) -> dict:
+    """Create a new TOPdesk incident."""
+    return topdesk_sdk._incident.incident.create(caller=caller_id, **kwargs)
+
+@mcp.tool()
+def update_incident(incident_id: str, **kwargs) -> dict:
+    """Update an existing TOPdesk incident."""
+    return topdesk_sdk._incident.incident.patch(incident_id, **kwargs)
+
+@mcp.tool()
+def delete_incident(incident_id: str) -> dict:
+    """Delete a TOPdesk incident."""
+    return topdesk_sdk._incident.incident.delete(incident_id)
+
+@mcp.tool()
+def archive_incident(incident_id: str) -> dict:
+    """Archive a TOPdesk incident."""
+    return topdesk_sdk._incident.incident.archive(incident_id)
+
+@mcp.tool()
+def unarchive_incident(incident_id: str) -> dict:
+    """Unarchive a TOPdesk incident."""
+    return topdesk_sdk._incident.incident.unarchive(incident_id)
+
+@mcp.tool()
+def get_timespent_on_incident(incident_id: str) -> list:
+    """Get all time spent entries for a TOPdesk incident."""
+    return topdesk_sdk._incident.incident._timespent.get_list(incident_id=incident_id)
+
+@mcp.tool()
+def register_timespent_on_incident(incident_id: str, time_spent: int, **kwargs) -> dict:
+    """Register time spent on a TOPdesk incident."""
+    return topdesk_sdk._incident.incident._timespent.create(incident_id=incident_id, time_spent=time_spent, **kwargs)
+
+@mcp.tool()
+def escalate_incident(incident_id: str, **kwargs) -> dict:
+    """Escalate a TOPdesk incident."""
+    return topdesk_sdk._incident.incident.escalate(incident_id, **kwargs)
+
+@mcp.tool()
+def deescalate_incident(incident_id: str, **kwargs) -> dict:
+    """De-escalate a TOPdesk incident."""
+    return topdesk_sdk._incident.incident.deescalate(incident_id, **kwargs)
+
+@mcp.tool()
+def get_progress_trail(incident_id: str) -> list:
+    """Get the progress trail for a TOPdesk incident."""
+    return topdesk_sdk._incident.incident._progress_trail.get_list(incident_id=incident_id)
+
+##################
+# OPERATORS
+##################
+@mcp.tool()
+def get_operatorgroups(archived: bool = False, page_size: int = 100, query: str = None) -> list:
+    """Get a list of TOPdesk operator groups, optionally by FIQL query or leave blank to return all groups."""
+    return topdesk_sdk._operator.operator.get_operatorgroups(archived=archived, page_size=page_size, query=query)
+
+@mcp.tool()
+def get_operator(operator_id: str) -> dict:
+    """Get a TOPdesk operator by ID."""
+    return topdesk_sdk._operator.operator.get(operator_id)
+
+@mcp.tool()
+def get_operators_by_fiql_query(query: str) -> list:
+    """Get TOPdesk operators by FIQL query."""
+    return topdesk_sdk._operator.operator.get_list(query=query)
+
+##################
+# ACTIONS
+##################
+@mcp.tool()
+def add_action_to_incident(incident_id: str, text: str) -> dict:
+    """Add an action (ie, reply/comment) to a TOPdesk incident."""
+    return topdesk_sdk._incident.incident.patch(incident_id, action=text)
+
+@mcp.tool()
+def get_incident_actions(incident_id: str) -> list:
+    """Get all actions (ie, replies/comments) for a TOPdesk incident."""
+    return topdesk_sdk._incident.incident._action.get_list(incident_id=incident_id)
+
+@mcp.tool()
+def delete_incident_action(incident_id: str, action_id: str) -> dict:
+    """Delete a specific action (ie, reply/comment) for a TOPdesk incident."""
+    return topdesk_sdk._incident.incident._action.delete(incident_id=incident_id, action_id=action_id)
+
+################
+# PERSONS
+################
+@mcp.tool()
+def get_person_by_query(query: str) -> list:
+    """Get TOPdesk persons by FIQL query."""
+    return topdesk_sdk._person.person.get_list(query=query)
+
+@mcp.tool()
+def get_person(person_id: str) -> dict:
+    """Get a TOPdesk person by ID."""
+    return topdesk_sdk._person.person.get(person_id)
+
+@mcp.tool()
+def create_person(**kwargs) -> dict:
+    """Create a new TOPdesk person."""
+    return topdesk_sdk._person.person.create(**kwargs)
+
+@mcp.tool()
+def update_person(person_id: str, **kwargs) -> dict:
+    """Update an existing TOPdesk person."""
+    return topdesk_sdk._person.person.update(person_id, **kwargs)
+
+@mcp.tool()
+def archive_person(person_id: str, reason_id: str = None) -> dict:
+    """Archive a TOPdesk person."""
+    return topdesk_sdk._person.person.archive(person_id, reason_id=reason_id)
+
+@mcp.tool()
+def unarchive_person(person_id: str) -> dict:
+    """Unarchive a TOPdesk person."""
+    return topdesk_sdk._person.person.unarchive(person_id)
+
+if __name__ == "__main__":
+    mcp.run()
