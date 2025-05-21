@@ -16,7 +16,7 @@ This project is a Model Context Protocol (MCP) server implemented in Python. It 
       "args": [
         "--from", 
         "git+https://github.com/dbsanfte/topdesk-mcp@master",
-        "topdesk_mcp"
+        "topdesk-mcp"
       ],
       "env": {
          "TOPDESK_URL": "<your topdesk URL>",
