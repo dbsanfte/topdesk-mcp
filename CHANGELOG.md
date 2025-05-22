@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/dbsanfte/topdesk-mcp/compare/v0.5.1...v0.5.2) (2025-05-22)
+
+
+### Bug Fixes
+
+* add attachments flag for progress_trail too, and make these False by default ([5b3ac09](https://github.com/dbsanfte/topdesk-mcp/commit/5b3ac0903b57fa6e53ab47d1baa0a1043b5cf79c))
+
 ## [0.5.1](https://github.com/dbsanfte/topdesk-mcp/compare/v0.5.0...v0.5.1) (2025-05-22)
 
 
