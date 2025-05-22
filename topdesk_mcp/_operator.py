@@ -1,4 +1,4 @@
-from . import _utils
+from topdesk_mcp import _utils
 import re
 
 class operator:

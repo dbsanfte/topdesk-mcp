@@ -1,11 +1,10 @@
 import re, base64
 import logging
-from . import _incident
-from . import _person
-from . import _utils
-from . import _operator
+from topdesk_mcp import _incident
+from topdesk_mcp import _person
+from topdesk_mcp import _utils
+from topdesk_mcp import _operator
 
-# from .incident import incident
 class connect:
     # Created API-version 3.0.5
 

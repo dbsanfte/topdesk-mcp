@@ -1,4 +1,6 @@
-from . import _utils
+from topdesk_mcp import _utils
+import logging
+
 class person:
 
     def __init__(self, topdesk_url, credpair):
@@ -7,6 +9,8 @@ class person:
         self.utils = _utils.utils(self._topdesk_url, self._credpair)
         self.private_details = self._private_details(self._topdesk_url, self._credpair)
         self.contract = self._contract(self._topdesk_url, self._credpair)
+        self._logger = logging.getLogger(__name__)
+        self._logger.debug("TOPdesk API person object initialised.")
 
     def get(self, id):
         return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/persons/id/{}".format(id)))
@@ -33,6 +37,8 @@ class person:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API contract object initialised.")
 
         def get(self, person_id):
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/persons/id/{}/contract".format(person_id)))
@@ -45,6 +51,8 @@ class person:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API private details object initialised.")
         
         def get(self, person_id):
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/persons/id/{}/privateDetails".format(person_id)))
