@@ -20,8 +20,7 @@ jobs:
         pip install uv
         uv venv
         uv pip install setuptools wheel build
-    - name: Build
-      run: |
         python -m build
+    
     - name: Publish
       uses: pypa/gh-action-pypi-publish@release/v1
