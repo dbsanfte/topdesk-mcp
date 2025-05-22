@@ -14,8 +14,6 @@ This project is a Model Context Protocol (MCP) server implemented in Python. It 
       "type": "stdio",
       "command": "uvx",
       "args": [
-        "--from", 
-        "git+https://github.com/dbsanfte/topdesk-mcp@master",
         "topdesk-mcp"
       ],
       "env": {
