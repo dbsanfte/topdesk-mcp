@@ -1,6 +1,14 @@
 from fastmcp import FastMCP
 from topdesk_mcp import _topdesk_sdk as topdesk_sdk
 import os
+import logging
+
+# Set up logging
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", logging.INFO),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    filename=os.getenv("LOG_FILE", None)
+)
 
 # Load config from environment variables
 TOPDESK_URL = os.environ.get("TOPDESK_URL")
@@ -35,7 +43,7 @@ def get_fiql_query_howto() -> str:
 def get_object_schemas() -> str:
     """Get the full object schemas for TOPdesk incidents and all their subfields."""
     try:
-        with open(os.path.join(os.path.dirname(__file__), "resources", "object_shemas.yaml"), "r", encoding="utf-8") as file:
+        with open(os.path.join(os.path.dirname(__file__), "resources", "object_schemas.yaml"), "r", encoding="utf-8") as file:
             return file.read()
     except Exception as e:
         return f"Error reading object schemas: {str(e)}"
@@ -285,8 +293,17 @@ def unarchive_person(person_id: str) -> dict:
 
 def main():
     """Main function to run the MCP server."""
-    #mcp.run('sse', host='0.0.0.0', port=3030)
-    mcp.run()
+    transport = os.environ.get("TOPDESK_MCP_TRANSPORT", "stdio")
+    host = os.environ.get("TOPDESK_MCP_HOST", "0.0.0.0")
+    port = int(os.environ.get("TOPDESK_MCP_PORT", 3030))
+    
+    if transport not in ["stdio", "streamable-http", "sse"]:
+        raise ValueError("Invalid transport type. Choose 'stdio', 'streamable-http', or 'sse'.")
+    
+    if transport == "stdio":
+        mcp.run()    
+    else:
+        mcp.run(transport=transport, host=host, port=port)
 
 if __name__ == "__main__":
     main()

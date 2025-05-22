@@ -28,6 +28,14 @@ This project is a Model Context Protocol (MCP) server implemented in Python. It 
 }
 ```
 
+## Environment Variables
+* `TOPDESK_URL`: The base URL of your Topdesk instance. e.g. `https://yourcompany.topdesk.net`
+* `TOPDESK_USERNAME`: The username you generated the API token against.
+* `TOPDESK_PASSWORD`: Your API token
+* `TOPDESK_MCP_TRANSPORT`: (Optional) The transport to use: 'stdio', 'streamable-http', 'sse'. Defaults to 'stdio'.
+* `TOPDESK_MCP_HOST`: (Optional) The host to listen on (for 'streamable-http' and 'sse'). Defaults to '0.0.0.0'.
+* `TOPDESK_MCP_PORT`: (Optional) The port to listen on (for 'streamable-http' and 'sse'). Defaults to '3030'.
+
 ## Setup for Local Development
 1. Ensure Python 3.11+ is installed.
 2. Create and activate a virtual environment:

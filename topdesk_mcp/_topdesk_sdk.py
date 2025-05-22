@@ -1,4 +1,5 @@
 import re, base64
+import logging
 from . import _incident
 from . import _person
 from . import _utils
@@ -23,6 +24,12 @@ class connect:
         self.operator = _operator.operator(self._topdesk_url, self._credpair)
         self.budgetholder = self._budgetholder(self._topdesk_url, self._credpair)
         self.operational_activities = self._operational_activities(self._topdesk_url, self._credpair)
+        self._logger = logging.getLogger(__name__)
+        self._logger.debug("TOPdesk API connect object initialised.")
+        self._logger.debug("TOPdesk URL: " + self._topdesk_url)
+        self._logger.debug("TOPdesk username: " + topdesk_username)
+        self._logger.debug("TOPdesk password: " + topdesk_password)
+        self._logger.debug("TOPdesk credpair: " + self._credpair)
 
     class _operatorgroup:
         
@@ -30,9 +37,11 @@ class connect:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API operatorgroup object initialised.")
         
         def get_operators(self, operatorgroup_id):
-            return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/operatorgroups/id/{}/operators".format(operatorgroup_id)))
+            self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/operatorgroups/id/{}/operators".format(operatorgroup_id)))
 
         def get_list(self, archived=False, page_size=100, query=None):
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/operatorgroups", archived, page_size, query))
@@ -43,7 +52,7 @@ class connect:
             for operatorgroup in result:
                 if re.match(rf"(.+)?{query}(.+)?", operatorgroup['groupName'], re.IGNORECASE):
                     canidates.append(operatorgroup['id'])
-            return self.utils.print_lookup_canidates(canidates)
+            return self.utils.resolve_lookup_candidates(canidates)
 
         def create(self, groupName, **kwargs):
             kwargs['groupName'] = groupName
@@ -66,6 +75,8 @@ class connect:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API supplier object initialised.")
 
         def get(self, id):
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/suppliers/{}".format(id)))
@@ -79,6 +90,8 @@ class connect:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API location object initialised.")
         
         def get_list(self, archived=False, page_size=100, query=None):
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/locations", archived, page_size, query))
@@ -91,6 +104,8 @@ class connect:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API branch object initialised.")
 
         def get_list(self, archived=False, page_size=100, query=None):
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/branches", archived, page_size, query))
@@ -110,6 +125,8 @@ class connect:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API operational_activities object initialised.")
 
         def get_list(self, **kwargs):
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/operationalActivities", extended_uri=kwargs))
@@ -123,6 +140,8 @@ class connect:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API department object initialised.")
 
         def get_list(self, archived=False, page_size=100):
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/departments", archived, page_size))
@@ -137,6 +156,8 @@ class connect:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API budgetholder object initialised.")
 
         def get_list(self):
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/budgetholders"))
@@ -160,6 +181,3 @@ class connect:
     def notification(self, title, **kwargs):
         kwargs['title'] = title
         return self.utils.handle_topdesk_response(self.utils.post_to_topdesk("/tas/api/tasknotifications/custom", self.utils.add_id_jsonbody(**kwargs)))
-
-if __name__ == "__main__":
-    pass

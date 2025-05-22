@@ -51,6 +51,3 @@ class person:
 
         def update(self, person_id, **kwargs):
             return self.utils.handle_topdesk_response(self.utils.put_to_topdesk("/tas/api/persons/id/{}/privateDetails".format(person_id), self.utils.add_id_jsonbody(**kwargs)))
-
-if __name__ == "__main__":
-    pass

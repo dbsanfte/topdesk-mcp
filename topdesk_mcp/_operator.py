@@ -35,12 +35,12 @@ class operator:
 
     def get_id_operator(self, query):
         result = self.get_list()
-        canidates = list()
+        candidates = list()
         for operator_dynamic_name in result:
             if re.match(rf"(.+)?{query}(.+)?", operator_dynamic_name['dynamicName'], re.IGNORECASE):
-                canidates.append(operator_dynamic_name['id'])
+                candidates.append(operator_dynamic_name['id'])
 
-        return self.utils.print_lookup_canidates(canidates)
+        return self.utils.resolve_lookup_candidates(candidates)
 
     def create(self, surName, **kwargs):
         kwargs['surName'] = surName
@@ -99,6 +99,3 @@ class operator:
 
         def unlink_operetor(self, operator_id, id_list):
             return self.utils.handle_topdesk_response(self.utils.delete_from_topdesk("/tas/api/operators/id/{}/filters/operator".format(operator_id), self.utils.add_id_list(id_list)))
-
-if __name__ == "__main__":
-    pass

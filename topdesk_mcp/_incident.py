@@ -1,5 +1,6 @@
 from . import _utils
 import re
+import logging
 
 class incident:
 
@@ -10,6 +11,9 @@ class incident:
         self.action = self._action(self._topdesk_url, self._credpair)
         self.request = self._request(self._topdesk_url, self._credpair)
         self.timespent = self._timespent(self._topdesk_url, self._credpair)
+        self._logger = logging.getLogger(__name__)
+        self._logger.debug("Incident class initialized with URL: %s", self._topdesk_url)
+        self._logger.debug("Incident class initialized with credentials: %s", self._credpair)
 
     def get(self, incident):
         if self.utils.is_valid_uuid(incident):
@@ -52,6 +56,8 @@ class incident:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API action object initialised.")
 
         def get_list(self, incident, inlineimages=False, non_api_attachments_url=False, page_size=100):
             ext_uri= { 'inlineimages': inlineimages, 'non_api_attachments_url': non_api_attachments_url }
@@ -79,6 +85,8 @@ class incident:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API request object initialised.")
 
         def get_list(self, incident, inlineimages=False, non_api_attachments_url=False, page_size=100):
             ext_uri= { 'inlineimages': inlineimages, 'non_api_attachments_url': non_api_attachments_url }
@@ -106,6 +114,8 @@ class incident:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API timespent object initialised.")
 
         def get(self, incident):
             if self.utils.is_valid_uuid(incident):    
@@ -169,7 +179,7 @@ class incident:
             if re.match(rf"(.+)?{query}(.+)?", impact['name'], re.IGNORECASE):
                 canidates.append(impact['id'])
 
-        return self.utils.print_lookup_canidates(canidates)
+        return self.utils.resolve_lookup_candidates(canidates)
 
     def get_id_priority(self, query):
         result = self.priorities()
@@ -178,7 +188,7 @@ class incident:
             if re.match(rf"(.+)?{query}(.+)?", priority['name'], re.IGNORECASE):
                 canidates.append(priority['id'])
 
-        return self.utils.print_lookup_canidates(canidates)
+        return self.utils.resolve_lookup_candidates(canidates)
 
     def get_id_urgency(self, query):
         result = self.urgencies()
@@ -187,7 +197,7 @@ class incident:
             if re.match(rf"(.+)?{query}(.+)?", urgency['name'], re.IGNORECASE):
                 canidates.append(urgency['id'])
 
-        return self.utils.print_lookup_canidates(canidates)
+        return self.utils.resolve_lookup_candidates(canidates)
 
     def get_id_entryType(self, query):
         result = self.entry_types()
@@ -196,7 +206,7 @@ class incident:
             if re.match(rf"(.+)?{query}(.+)?", entryType['name'], re.IGNORECASE):
                 canidates.append(entryType['id'])
 
-        return self.utils.print_lookup_canidates(canidates)
+        return self.utils.resolve_lookup_candidates(canidates)
 
     def get_id_callType(self, query):
         result = self.call_types()
@@ -205,7 +215,7 @@ class incident:
             if re.match(rf"(.+)?{query}(.+)?", callType['name'], re.IGNORECASE):
                 canidates.append(callType['id'])
 
-        return self.utils.print_lookup_canidates(canidates)
+        return self.utils.resolve_lookup_candidates(canidates)
 
     def get_id_duration(self, query):
         result = self.durations()
@@ -214,7 +224,7 @@ class incident:
             if re.match(rf"(.+)?{query}(.+)?", callType['name'], re.IGNORECASE):
                 canidates.append(callType['id'])
 
-        return self.utils.print_lookup_canidates(canidates)
+        return self.utils.resolve_lookup_candidates(canidates)
     
     def create(self, caller, **kwargs):
         # Caller can be: email, uuid or unregisted user. We'll try it in that order.
@@ -244,6 +254,3 @@ class incident:
 
     def get_list(self, archived=False, page_size=100, query=None, **kwargs):
         return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/incidents/", archived, page_size=page_size, query=query, extended_uri=kwargs))
-
-if __name__ == "__main__":
-    pass
