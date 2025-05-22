@@ -19,6 +19,7 @@ jobs:
       - name: Install dependencies with uv
         run: |
             pip install uv
+            uv venv
             uv pip install -e .
             uv pip install -e ".[dev]" 
 
