@@ -214,13 +214,17 @@ def topdesk_add_action_to_incident(incident_id: str, text: str) -> dict:
     return topdesk_client.incident.patch(incident=incident_id, action=text)
 
 @mcp.tool()
-def topdesk_get_incident_actions(incident_id: str) -> list:
+def topdesk_get_incident_actions(incident_id: str, include_all_attachments: bool) -> list:
     """Get all actions (ie, replies/comments) for a TOPdesk incident.
 
     Parameters:
         incident_id: The UUID or incident number of the TOPdesk incident.
+        include_all_attachments: Whether to include base64-encoded attachments in the response.
     """
-    return topdesk_client.incident.action.get_list(incident=incident_id)
+    return topdesk_client.incident.action.get_list(
+        incident=incident_id, 
+        non_api_attachments_url=include_all_attachments
+    )
 
 @mcp.tool()
 def topdesk_delete_incident_action(incident_id: str, action_id: str) -> dict:
