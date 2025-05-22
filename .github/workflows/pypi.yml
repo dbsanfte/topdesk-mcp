@@ -20,6 +20,7 @@ jobs:
         pip install uv
         uv venv
         uv pip install setuptools wheel build
+        uv version ${{ github.event.release.tag_name }}
         uv build
 
     - name: Publish
