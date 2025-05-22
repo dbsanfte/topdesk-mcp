@@ -40,10 +40,12 @@ class connect:
             self._logger.debug("TOPdesk API operatorgroup object initialised.")
         
         def get_operators(self, operatorgroup_id):
-            self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/operatorgroups/id/{}/operators".format(operatorgroup_id)))
+            return self.utils.handle_topdesk_response(
+                self.utils.request_topdesk("/tas/api/operatorgroups/id/{}/operators".format(operatorgroup_id)))
 
         def get_list(self, archived=False, page_size=100, query=None):
-            return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/operatorgroups", archived, page_size, query))
+            return self.utils.handle_topdesk_response(
+                self.utils.request_topdesk("/tas/api/operatorgroups", archived, page_size, query))
 
         def get_id_operatorgroup(self, query):
             result = self.get_list()
