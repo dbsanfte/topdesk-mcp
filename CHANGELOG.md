@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.3](https://github.com/dbsanfte/topdesk-mcp/compare/v0.5.2...v0.5.3) (2025-05-23)
+
+
+### Bug Fixes
+
+* update README with exposed tools, fix hosts in pyproject.toml ([bfd8661](https://github.com/dbsanfte/topdesk-mcp/commit/bfd8661302e8d9bc88f5b4087f480542e496df07))
+
 ## [0.5.2](https://github.com/dbsanfte/topdesk-mcp/compare/v0.5.1...v0.5.2) (2025-05-22)
 
 
