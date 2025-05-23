@@ -14,7 +14,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv]
-trusted-hosts = [
+allow-insecure-host = [
   "pypi.org",
   "files.pythonhosted.org"
 ]
