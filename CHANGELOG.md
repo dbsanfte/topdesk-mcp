@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/dbsanfte/topdesk-mcp/compare/v0.5.3...v0.6.0) (2025-05-27)
+
+
+### Features
+
+* Include inline images in progress trail by default ([003531f](https://github.com/dbsanfte/topdesk-mcp/commit/003531f7d8821b84e5eff4ffbabcbcee29fadd20))
+
 ## [0.5.3](https://github.com/dbsanfte/topdesk-mcp/compare/v0.5.2...v0.5.3) (2025-05-23)
 
 
