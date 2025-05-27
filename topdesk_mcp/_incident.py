@@ -37,8 +37,8 @@ class incident:
         else:
             return self.utils.handle_topdesk_response(self.utils.put_to_topdesk("/tas/api/incidents/number/{}/escalate".format(incident), param))
 
-    def get_progress_trail(self, incident, inlineimages=False, non_api_attachments_url=False, page_size=100):
-        ext_uri= { 'inlineimages': inlineimages, 'non_api_attachments_url': non_api_attachments_url }
+    def get_progress_trail(self, incident, inlineimages=False, non_api_attachments_url=False, force_images_as_data=False, page_size=100):
+        ext_uri= { 'inlineimages': inlineimages, 'non_api_attachments_url': non_api_attachments_url, 'force_images_as_data': force_images_as_data }
         if self.utils.is_valid_uuid(incident):
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/incidents/id/{}/progresstrail".format(incident), page_size=page_size, extended_uri=ext_uri))
         else:

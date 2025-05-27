@@ -162,16 +162,18 @@ def topdesk_deescalate_incident(incident_id: str, reason_id: str) -> dict:
     return topdesk_client.incident.deescalate(incident=incident_id, reason_id=reason_id)
 
 @mcp.tool()
-def topdesk_get_progress_trail(incident_id: str, include_all_attachments: bool = False) -> list:
+def topdesk_get_progress_trail(incident_id: str, inlineimages: bool=True, force_images_as_data: bool=True) -> list:
     """Get the progress trail for a TOPdesk incident.
 
     Parameters:
         incident_id: The UUID or incident number of the TOPdesk incident.
-        include_all_attachments: Whether to include base64-encoded attachments in the response.
+        force_images_as_data: Whether to force images to be returned as base64 data. Defaults to True.
+        inlineimages: Whether to include inline images in the progress trail. Defaults to True.
     """
     return topdesk_client.incident.get_progress_trail(
         incident=incident_id, 
-        non_api_attachments_url=include_all_attachments
+        inlineimages=inlineimages,
+        force_images_as_data=force_images_as_data
     )
 
 ##################
