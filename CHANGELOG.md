@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/dbsanfte/topdesk-mcp/compare/v0.6.0...v0.7.0) (2025-05-28)
+
+
+### Features
+
+* include incident attachments as b64_data for ingestion by llm ([668824f](https://github.com/dbsanfte/topdesk-mcp/commit/668824f94536949a8eb9b87b55a2af2e2c3984c3))
+
 ## [0.6.0](https://github.com/dbsanfte/topdesk-mcp/compare/v0.5.3...v0.6.0) (2025-05-27)
 
 
