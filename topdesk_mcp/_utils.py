@@ -2,6 +2,7 @@ import re
 import requests
 import urllib.parse
 import logging
+import base64  # Add this import at the top of the file
 
 class utils:
 
@@ -96,6 +97,17 @@ class utils:
         # Success (OK or Created)
         if response.status_code in (200, 201):
             if not self._partial_content_container:
+                # Check if response is a file download (non-JSON content)
+                content_type = response.headers.get('Content-Type', '')
+                if content_type and 'application/json' not in content_type.lower():
+                    self._logger.debug(f"Received file download with Content-Type: {content_type}")
+                    # Return base64 encoding of binary content
+                    return {
+                        'content_type': content_type,
+                        'filename': self._get_filename_from_headers(response.headers),
+                        'b64_data': base64.b64encode(response.content).decode('utf-8')
+                    }
+                
                 if not response.text:
                     return "Success"
                 return response.json()
@@ -111,7 +123,17 @@ class utils:
         # Partial Content (pagination)
         if response.status_code == 206:
             self._handle_partial_content(response)
-            
+
+    def _get_filename_from_headers(self, headers):
+        """
+        Extract filename from Content-Disposition header if present.
+        """
+        content_disposition = headers.get('Content-Disposition', '')
+        filename_match = re.search(r'filename="?([^";]+)', content_disposition)
+        if filename_match:
+            return filename_match.group(1)
+        return 'downloaded_file'
+
     def _handle_partial_content(self, response):
         self._partial_content_container += response.json()
         # Try to extract page_size and start from the URL

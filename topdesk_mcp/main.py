@@ -176,6 +176,15 @@ def topdesk_get_progress_trail(incident_id: str, inlineimages: bool=True, force_
         force_images_as_data=force_images_as_data
     )
 
+@mcp.tool()
+def topdesk_get_incident_attachments(incident_id: str) -> list:
+    """Get all attachments for a TOPdesk incident.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident.
+    """
+    return topdesk_client.incident.attachments.download_attachments(incident=incident_id)
+
 ##################
 # OPERATORS
 ##################
@@ -220,16 +229,14 @@ def topdesk_add_action_to_incident(incident_id: str, text: str) -> dict:
     return topdesk_client.incident.patch(incident=incident_id, action=text)
 
 @mcp.tool()
-def topdesk_get_incident_actions(incident_id: str, include_all_attachments: bool = False) -> list:
+def topdesk_get_incident_actions(incident_id: str) -> list:
     """Get all actions (ie, replies/comments) for a TOPdesk incident.
 
     Parameters:
         incident_id: The UUID or incident number of the TOPdesk incident.
-        include_all_attachments: Whether to include base64-encoded attachments in the response.
     """
     return topdesk_client.incident.action.get_list(
-        incident=incident_id, 
-        non_api_attachments_url=include_all_attachments
+        incident=incident_id
     )
 
 @mcp.tool()

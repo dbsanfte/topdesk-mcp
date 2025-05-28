@@ -11,6 +11,7 @@ class incident:
         self.action = self._action(self._topdesk_url, self._credpair)
         self.request = self._request(self._topdesk_url, self._credpair)
         self.timespent = self._timespent(self._topdesk_url, self._credpair)
+        self.attachments = self._attachments(self._topdesk_url, self._credpair)
         self._logger = logging.getLogger(__name__)
         self._logger.debug("Incident class initialized with URL: %s", self._topdesk_url)
         self._logger.debug("Incident class initialized with credentials: %s", self._credpair)
@@ -132,6 +133,36 @@ class incident:
                 return self.utils.handle_topdesk_response(self.utils.post_to_topdesk("/tas/api/incidents/id/{}/timespent".format(incident), param))
             else:
                 return self.utils.handle_topdesk_response(self.utils.post_to_topdesk("/tas/api/incidents/number/{}/timespent".format(incident), param))
+
+    class _attachments:
+        def __init__(self, topdesk_url, credpair):
+            self._topdesk_url = topdesk_url
+            self._credpair = credpair
+            self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._logger = logging.getLogger(__name__)
+            self._logger.debug("TOPdesk API attachments object initialised.")
+
+        def get_list(self, incident, inlineimages=False, non_api_attachments_url=False, page_size=100):
+            ext_uri= { 'inlineimages': inlineimages, 'non_api_attachments_url': non_api_attachments_url }
+            if self.utils.is_valid_uuid(incident):
+                return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/incidents/id/{}/attachments".format(incident), page_size=page_size, extended_uri=ext_uri))
+            else:
+                return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/incidents/number/{}/attachments".format(incident), page_size=page_size, extended_uri=ext_uri))
+
+        def download_attachments(self, incident):
+            attachment_list = self.get_list(incident)
+            attachment_data_list = []
+            for attachment in attachment_list:
+                attachment_json = self.utils.handle_topdesk_response(self.utils.request_topdesk(attachment['downloadUrl']))
+                attachment_json['person']=attachment['person']
+                attachment_data_list.append(attachment_json)
+            return attachment_data_list
+
+        def download_attachment(self, incident, attachment_id):
+            if self.utils.is_valid_uuid(incident):
+                return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/incidents/id/{}/attachments/{}/download".format(incident, attachment_id)))
+            else:
+                raise ValueError("Incident UUID is required to download an attachment. Incident numbers do not work.")
 
     def durations(self):
         return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/incidents/durations"))
