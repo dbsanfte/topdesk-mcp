@@ -1,10 +1,8 @@
 from topdesk_mcp import _utils
-import os
 import re
 import logging
 import base64
 import tempfile
-import requests  # Add this import for Docling API calls
 from markitdown import MarkItDown
 
 class incident:
