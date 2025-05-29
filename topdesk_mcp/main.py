@@ -262,11 +262,11 @@ def topdesk_get_operators_by_fiql_query(query: str) -> list:
 ##################
 @mcp.tool()
 def topdesk_add_action_to_incident(incident_id: str, text: str) -> dict:
-    """Add an action (ie, reply/comment) to a TOPdesk incident.
+    """Add an action (ie, reply/comment) to a TOPdesk incident. Only HTML formatting is supported.
 
     Parameters:
         incident_id: The UUID or incident number of the TOPdesk incident.
-        text: The content of the action to add.
+        text: The HTML-formatted content of the action to add.
     """
     return topdesk_client.incident.patch(incident=incident_id, action=text)
 
