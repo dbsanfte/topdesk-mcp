@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/dbsanfte/topdesk-mcp/compare/v0.8.0...v0.8.1) (2025-05-29)
+
+
+### Bug Fixes
+
+* action formatting must be HTML ([f259581](https://github.com/dbsanfte/topdesk-mcp/commit/f259581bdfec7bd611f4d6e8dce208563511f89c))
+
 ## [0.8.0](https://github.com/dbsanfte/topdesk-mcp/compare/v0.7.0...v0.8.0) (2025-05-29)
 
 
