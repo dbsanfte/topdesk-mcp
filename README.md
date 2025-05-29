@@ -34,6 +34,22 @@ This project is a Model Context Protocol (MCP) server implemented in Python. It 
 * `TOPDESK_MCP_HOST`: (Optional) The host to listen on (for 'streamable-http' and 'sse'). Defaults to '0.0.0.0'.
 * `TOPDESK_MCP_PORT`: (Optional) The port to listen on (for 'streamable-http' and 'sse'). Defaults to '3030'.
 
+### Document Conversion Environment Variables
+Topdesk Attachments can be converted to Markdown format by the tool. 
+
+By default it will try to do this with simple MarkItDown library which often isn't sufficient.
+
+These variables configure the attachment-to-markdown conversion feature to leverage a Docling or OpenAI instance instead:
+
+* `DOCLING_ADDRESS`: (Optional) URL of a Docling API server for document conversion. e.g. `http://localhost:8080`
+* `DOCLING_API_KEY`: (Optional) API key for Docling API authentication
+* `DOCLING_USERNAME`: (Optional) Username for Docling API basic authentication (fallback if no API key)
+* `DOCLING_PASSWORD`: (Optional) Password for Docling API basic authentication (fallback if no API key)
+* `OPENAI_API_BASE`: (Optional) Base URL for OpenAI-compatible API for document conversion. e.g. `https://api.openai.com`
+* `OPENAI_API_KEY`: (Optional) API key for OpenAI API authentication
+* `OPENAI_MODEL_NAME`: (Optional) Model name to use for OpenAI API calls. Defaults to 'gpt-4.1'
+* `SSL_VERIFY`: (Optional) Enable/disable SSL verification for API calls. Set to 'false' to disable. Defaults to 'true'.
+
 ## Setup for Local Development
 1. Ensure Python 3.11+ is installed.
 2. Create and activate a virtual environment:
@@ -65,6 +81,9 @@ topdesk_mcp/  # Directory for the MCP server package
     _operator.py    # Operator API
     _person.py      # Person API
     _utils.py       # Helper methods for Requests
+
+    tests/
+      (unit tests)
 ```
 
 ## Exposed Tools
@@ -113,6 +132,15 @@ topdesk_mcp/  # Directory for the MCP server package
 
 - **topdesk_get_progress_trail**  
   Get the progress trail for a TOPdesk incident.
+
+- **topdesk_get_incident_attachments**  
+  Get all attachments for a TOPdesk incident as base64-encoded data.
+
+- **topdesk_get_incident_attachments_as_markdown**  
+  Download and convert all attachments for a TOPdesk incident to Markdown format. Uses intelligent document conversion with support for PDFs, Office documents, images, and other file types. Attempts conversion using OpenAI API (if configured), then Docling API (if configured), and falls back to MarkItDown for local processing.
+
+- **topdesk_get_complete_incident_overview**  
+  Get a comprehensive overview of a TOPdesk incident including its details, progress trail, and attachments converted to Markdown. This tool combines the results of `topdesk_get_incident`, `topdesk_get_progress_trail`, and `topdesk_get_incident_attachments_as_markdown` into a single response for convenient access to all incident information.
 
 - **topdesk_get_operatorgroups_of_operator**  
   Get a list of TOPdesk operator groups that an op is a member of, optionally by FIQL query or leave blank to return all groups.

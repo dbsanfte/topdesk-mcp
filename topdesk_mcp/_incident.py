@@ -1,6 +1,11 @@
 from topdesk_mcp import _utils
+import os
 import re
 import logging
+import base64
+import tempfile
+import requests  # Add this import for Docling API calls
+from markitdown import MarkItDown
 
 class incident:
 
@@ -21,6 +26,46 @@ class incident:
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/incidents/id/{}".format(incident)))
         else:
             return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/incidents/number/{}".format(incident)))
+        
+    def get_concise(self, incident):
+        """
+        Retrieves a concise version of the incident details, including only essential fields.
+        
+        Args:
+            incident: The incident UUID or number
+            
+        Returns:
+            A dictionary containing only the most relevant incident fields
+        """
+        # Get full incident data
+        full_incident = self.get(incident)
+        
+        # Create concise version with only desired fields
+        concise_fields = [
+            'id', 'status', 'number', 'request', 'caller', 'briefDescription',
+            'category', 'subcategory', 'callType', 'entryType', 'impact',
+            'urgency', 'priority', 'duration', 'targetDate', 'operator',
+            'operatorGroup', 'processingStatus', 'completed', 'closed',
+            'escalationStatus', 'escalationOperator', 'callDate', 'creationDate',
+            'modifier', 'modificationDate'
+        ]
+        
+        # Optional fields that should only be included if not null
+        optional_fields = {
+            'completedDate': None,
+            'closedDate': None,
+            'closureCode': None,
+            'escalationReason': None
+        }
+        
+        concise_incident = {field: full_incident.get(field) for field in concise_fields if field in full_incident}
+        
+        # Add optional fields only if they have values
+        for field, default in optional_fields.items():
+            if field in full_incident and full_incident.get(field) != default:
+                concise_incident[field] = full_incident.get(field)
+        
+        return concise_incident
 
     def deescalate(self, incident, reason_id=None):
         if reason_id:
@@ -139,6 +184,7 @@ class incident:
             self._topdesk_url = topdesk_url
             self._credpair = credpair
             self.utils = _utils.utils(self._topdesk_url, self._credpair)
+            self._md = MarkItDown(enable_plugins=True)
             self._logger = logging.getLogger(__name__)
             self._logger.debug("TOPdesk API attachments object initialised.")
 
@@ -158,11 +204,42 @@ class incident:
                 attachment_data_list.append(attachment_json)
             return attachment_data_list
 
+        def download_attachments_as_markdown(self, incident):
+            attachment_data_list = self.download_attachments(incident)
+            
+            for attachment in attachment_data_list:
+                try:
+                    # Write a temp file, convert it to markdown
+                    suffix = ".tmp"
+                    try:
+                        original_file_extension = attachment['filename'].split('.')[-1]
+                        suffix = f".{original_file_extension}"
+                    except IndexError:
+                        self._logger.warning("Attachment filename does not have an extension, markdown parsing may fail: %s", attachment['filename'])
+                    
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as file:
+                        file.write(base64.b64decode(attachment['base64_data']))
+                        # Use the new utility methods for conversion
+                        attachment['content'] = self.utils.convert_to_markdown(
+                            file.name, 
+                            attachment['filename']
+                        )
+                        del attachment['base64_data']  # Remove base64 data entirely
+                        
+                except Exception as e:
+                    self._logger.error("Error processing attachment: %s", e)
+                    attachment['content'] = f"Error processing attachment: {e}"
+                    del attachment['base64_data']  # Remove base64 data entirely
+            
+            return attachment_data_list
+        
         def download_attachment(self, incident, attachment_id):
             if self.utils.is_valid_uuid(incident):
                 return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/incidents/id/{}/attachments/{}/download".format(incident, attachment_id)))
             else:
                 raise ValueError("Incident UUID is required to download an attachment. Incident numbers do not work.")
+        
+        
 
     def durations(self):
         return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/incidents/durations"))

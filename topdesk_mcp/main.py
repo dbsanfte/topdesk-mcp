@@ -52,13 +52,17 @@ def topdesk_get_object_schemas() -> str:
 # INCIDENTS
 #################
 @mcp.tool()
-def topdesk_get_incident(incident_id: str) -> dict:
+def topdesk_get_incident(incident_id: str, concise: bool = True) -> dict:
     """Get a TOPdesk incident by UUID or by Incident Number (I-xxxxxx-xxx). Both formats are accepted.
 
     Parameters:
         incident_id: The UUID or incident number of the TOPdesk incident to retrieve.
+        concise: Whether to return a concise version of the incident. Defaults to True.
     """
-    return topdesk_client.incident.get(incident=incident_id)
+    if concise:
+        return topdesk_client.incident.get_concise(incident=incident_id)
+    else:
+        return topdesk_client.incident.get(incident=incident_id)
 
 @mcp.tool()
 def topdesk_get_incidents_by_fiql_query(query: str) -> list:
@@ -184,6 +188,44 @@ def topdesk_get_incident_attachments(incident_id: str) -> list:
         incident_id: The UUID or incident number of the TOPdesk incident.
     """
     return topdesk_client.incident.attachments.download_attachments(incident=incident_id)
+
+@mcp.tool()
+def topdesk_get_incident_attachments_as_markdown(incident_id: str) -> list:
+    """Get all attachments for a TOPdesk incident in Markdown format via pytesseract OCR.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident.
+    """
+    return topdesk_client.incident.attachments.download_attachments_as_markdown(incident=incident_id)
+
+@mcp.tool()
+def topdesk_get_complete_incident_overview(incident_id: str) -> dict:
+    """Get a comprehensive overview of a TOPdesk incident including its details, progress trail, and attachments converted to Markdown.
+
+    Parameters:
+        incident_id: The UUID or incident number of the TOPdesk incident.
+    """
+    # Get incident details
+    incident_details = topdesk_get_incident(incident_id)
+    
+    # Get progress trail
+    progress_trail = topdesk_get_progress_trail(
+        incident_id, 
+        inlineimages=False,
+        force_images_as_data=False
+    )
+    
+    # Get attachments as markdown
+    attachments = topdesk_get_incident_attachments_as_markdown(incident_id)
+    
+    # Combine results into a comprehensive overview
+    comprehensive_overview = {
+        "incident": incident_details,
+        "progress_trail": progress_trail,
+        "attachments": attachments
+    }
+    
+    return comprehensive_overview
 
 ##################
 # OPERATORS
