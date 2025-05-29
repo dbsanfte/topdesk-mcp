@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.0](https://github.com/dbsanfte/topdesk-mcp/compare/v0.7.0...v0.8.0) (2025-05-29)
+
+
+### Features
+
+* Markdown conversion for attachments. New 'incident summary' call with all info on the ticket in LLM friendly format. ([56d281e](https://github.com/dbsanfte/topdesk-mcp/commit/56d281e9dcffad11f0b1d80ca6c00afa0a8158f6))
+
+
+### Bug Fixes
+
+* imports ([34b8b9d](https://github.com/dbsanfte/topdesk-mcp/commit/34b8b9d6079eaf90f0dc573f848b4e26eaa4cb6f))
+
 ## [0.7.0](https://github.com/dbsanfte/topdesk-mcp/compare/v0.6.0...v0.7.0) (2025-05-28)
 
 
