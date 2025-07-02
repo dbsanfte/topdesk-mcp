@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.1](https://github.com/dbsanfte/topdesk-mcp/compare/v0.8.0...v0.8.1) (2025-07-02)
+
+
+### Bug Fixes
+
+* action formatting must be HTML ([f259581](https://github.com/dbsanfte/topdesk-mcp/commit/f259581bdfec7bd611f4d6e8dce208563511f89c))
+* MCP exception when calling FunctionTool directly ([3511587](https://github.com/dbsanfte/topdesk-mcp/commit/35115877426e863b4cd0ea35fa642d7d83040bad))
+
 ## [0.8.0](https://github.com/dbsanfte/topdesk-mcp/compare/v0.7.0...v0.8.0) (2025-05-29)
 
 
