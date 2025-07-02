@@ -206,18 +206,18 @@ def topdesk_get_complete_incident_overview(incident_id: str) -> dict:
         incident_id: The UUID or incident number of the TOPdesk incident.
     """
     # Get incident details
-    incident_details = topdesk_get_incident(incident_id)
+    incident_details = topdesk_client.incident.get_concise(incident=incident_id)
     
     # Get progress trail
-    progress_trail = topdesk_get_progress_trail(
-        incident_id, 
+    progress_trail = topdesk_client.incident.get_progress_trail(
+        incident=incident_id, 
         inlineimages=False,
         force_images_as_data=False
     )
-    
+
     # Get attachments as markdown
-    attachments = topdesk_get_incident_attachments_as_markdown(incident_id)
-    
+    attachments = topdesk_client.incident.attachments.download_attachments_as_markdown(incident=incident_id)
+
     # Combine results into a comprehensive overview
     comprehensive_overview = {
         "incident": incident_details,
