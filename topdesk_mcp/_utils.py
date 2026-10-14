@@ -131,7 +131,7 @@ class utils:
             return "Success"
         # Partial Content (pagination)
         if response.status_code == 206:
-            self._handle_partial_content(response)
+            return self._handle_partial_content(response)
 
     def _get_filename_from_headers(self, headers):
         """
