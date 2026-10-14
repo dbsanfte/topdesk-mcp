@@ -70,6 +70,19 @@ These variables configure the attachment-to-markdown conversion feature to lever
 * The server skeleton was generated using the official MCP server template.
 * Contributions are welcome.
 
+## Publishing
+
+Every push to `master`, including merged pull requests, builds and publishes to PyPI
+using the existing trusted publisher for `.github/workflows/pypi.yml`.
+Release Please and `RELEASE_PLEASE_TOKEN` are no longer used.
+
+The published version uses the major/minor version from `pyproject.toml`, with
+its patch number plus the publishing workflow's run number. For example, base
+version `0.8.1` and run number `21` publish `0.8.22`. The base version stays in
+the repository; publishing does not create version-bump commits. Keep the base
+version stable within a major/minor series so subsequent versions increase.
+Retries retain the same version and skip files already uploaded to PyPI.
+
 ## Package Structure
 ```
 topdesk_mcp/  # Directory for the MCP server package
