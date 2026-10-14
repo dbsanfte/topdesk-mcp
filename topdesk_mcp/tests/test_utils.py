@@ -711,3 +711,37 @@ class TestUtils:
         mock_openai.assert_not_called()
         mock_docling.assert_not_called()
         mock_md.assert_called_once()
+
+
+    def test_handle_topdesk_response_partial_content_returns_result(self, utils_instance, mock_response):
+        """A 206 response must return the value produced by the pagination handling."""
+        mock_response.status_code = 206
+        with patch.object(utils, '_handle_partial_content', return_value=[{"id": 1}]) as mock_partial:
+            result = utils_instance.handle_topdesk_response(mock_response)
+        mock_partial.assert_called_once_with(mock_response)
+        assert result == [{"id": 1}]
+
+    @patch('topdesk_mcp._utils.requests.get')
+    def test_paginated_request_returns_all_pages(self, mock_get, utils_instance):
+        """Pages fetched via 206 responses are combined and returned to the caller."""
+        first = Mock()
+        first.status_code = 206
+        first.headers = {'Content-Type': 'application/json'}
+        first.text = '[{"id": 1}, {"id": 2}]'
+        first.url = "https://test.topdesk.net/tas/api/incidents/?page_size=2"
+        first.json.return_value = [{"id": 1}, {"id": 2}]
+
+        last = Mock()
+        last.status_code = 200
+        last.headers = {'Content-Type': 'application/json'}
+        last.text = '[{"id": 3}]'
+        last.url = "https://test.topdesk.net/tas/api/incidents/?page_size=2&start=2"
+        last.json.return_value = [{"id": 3}]
+
+        mock_get.return_value = last
+        result = utils_instance.handle_topdesk_response(first)
+
+        assert result == [{"id": 1}, {"id": 2}, {"id": 3}]
+        assert mock_get.call_count == 1
+        assert "start=2" in mock_get.call_args[0][0]
+        assert utils_instance._partial_content_container == []
