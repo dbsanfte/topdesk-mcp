@@ -98,7 +98,7 @@ topdesk_mcp/  # Directory for the MCP server package
   Get a TOPdesk incident by UUID or by Incident Number (I-xxxxxx-xxx). Both formats are accepted.
 
 - **topdesk_get_incidents_by_fiql_query**  
-  Get TOPdesk incidents by FIQL query.
+  Get TOPdesk incidents by FIQL query, one page per call. Optional parameters: `fields` (comma-separated, empty = compact default set, `all` = complete incidents), `page_size` (1-500, default 50), `start` (offset, use `next_start` from the previous result) and `sort` (e.g. `callDate:desc`). Returns `incidents`, `count`, `more_available` and `next_start`; a page is shortened if needed to keep the tool result small.
 
 - **topdesk_get_incident_user_requests**  
   Get all user requests on a TOPdesk incident.
