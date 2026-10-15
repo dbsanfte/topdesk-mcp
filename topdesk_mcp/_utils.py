@@ -66,7 +66,7 @@ class utils:
         if extended_uri:
             params.update(extended_uri)
         if archived is not None:
-            params['query'] = f"archived=={archived}"
+            params['query'] = f"archived=={str(archived).lower()}"
         if query:
             # If 'query' already in params, append with semicolon
             if 'query' in params:
