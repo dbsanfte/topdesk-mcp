@@ -358,5 +358,5 @@ class incident:
         else:
             return self.utils.handle_topdesk_response(self.utils.put_to_topdesk("/tas/api/incidents/number/{}/unarchive".format(incident), None))
 
-    def get_list(self, archived=False, page_size=100, query=None, **kwargs):
+    def get_list(self, archived=None, page_size=100, query=None, **kwargs):
         return self.utils.handle_topdesk_response(self.utils.request_topdesk("/tas/api/incidents/", archived, page_size=page_size, query=query, extended_uri=kwargs))

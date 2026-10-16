@@ -1,6 +1,7 @@
 import pytest
 import base64
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+from topdesk_mcp import _incident
 from topdesk_mcp._topdesk_sdk import connect
 
 @pytest.fixture
@@ -287,3 +288,36 @@ class TestBudgetholder:
                 {"name": "New Budgetholder", "extra": "data"}
             )
             assert result == {"id": "789", "name": "New Budgetholder"}
+
+class TestIncident:
+    @pytest.fixture
+    def incident(self, topdesk_credentials):
+        url, _, _, credpair = topdesk_credentials
+        return _incident.incident(url, credpair)
+
+    @pytest.fixture
+    def json_response(self):
+        response = Mock()
+        response.status_code = 200
+        response.headers = {'Content-Type': 'application/json'}
+        response.text = '[]'
+        response.json.return_value = []
+        return response
+
+    def test_get_list_does_not_send_archived_filter_by_default(self, incident, json_response):
+        # The incidents endpoint rejects 'archived' as an unknown FIQL field with HTTP 400.
+        with patch('topdesk_mcp._utils.requests.get', return_value=json_response) as mock_get:
+            incident.get_list(query="status==secondLine")
+        url = mock_get.call_args[0][0]
+        assert "archived" not in url
+        assert "query=status%3D%3DsecondLine" in url
+
+    def test_get_list_without_query_has_no_query_parameter(self, incident, json_response):
+        with patch('topdesk_mcp._utils.requests.get', return_value=json_response) as mock_get:
+            incident.get_list()
+        assert "query=" not in mock_get.call_args[0][0]
+
+    def test_get_list_sends_archived_filter_when_requested(self, incident, json_response):
+        with patch('topdesk_mcp._utils.requests.get', return_value=json_response) as mock_get:
+            incident.get_list(archived=True, query="status==secondLine")
+        assert "archived%3D%3DTrue%3Bstatus%3D%3DsecondLine" in mock_get.call_args[0][0]
