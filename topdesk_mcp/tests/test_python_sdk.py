@@ -320,4 +320,4 @@ class TestIncident:
     def test_get_list_sends_archived_filter_when_requested(self, incident, json_response):
         with patch('topdesk_mcp._utils.requests.get', return_value=json_response) as mock_get:
             incident.get_list(archived=True, query="status==secondLine")
-        assert "archived%3D%3DTrue%3Bstatus%3D%3DsecondLine" in mock_get.call_args[0][0]
+        assert "archived%3D%3Dtrue%3Bstatus%3D%3DsecondLine" in mock_get.call_args[0][0]

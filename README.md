@@ -83,6 +83,13 @@ the repository; publishing does not create version-bump commits. Keep the base
 version stable within a major/minor series so subsequent versions increase.
 Retries retain the same version and skip files already uploaded to PyPI.
 
+After a successful PyPI publish, the workflow creates a GitHub release and a
+`v<version>` tag pointing to the published commit (for example, `v0.8.22`).
+GitHub automatically generates the release changelog since the previous release,
+including merged pull requests, contributors, and a link to the full comparison.
+For the first release, GitHub generates notes from the available history.
+Retries skip an existing GitHub release for the same version.
+
 ## Package Structure
 ```
 topdesk_mcp/  # Directory for the MCP server package
