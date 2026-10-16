@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: read
+      contents: write
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -27,6 +27,7 @@ jobs:
         cache-dependency-path: '**/pyproject.toml'
         
     - name: Build
+      id: build
       run: |
         pip install uv
         uv venv
@@ -43,8 +44,24 @@ jobs:
         )
         uv version "$version"
         uv build
+        echo "version=$version" >> "$GITHUB_OUTPUT"
 
     - name: Publish
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         skip-existing: true
+
+    - name: Create GitHub release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        RELEASE_TAG: v${{ steps.build.outputs.version }}
+      run: |
+        if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          echo "Release $RELEASE_TAG already exists."
+        else
+          gh release create "$RELEASE_TAG" \
+            --target "$GITHUB_SHA" \
+            --title "$RELEASE_TAG" \
+            --generate-notes
+        fi
