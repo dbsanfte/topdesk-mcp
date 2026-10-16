@@ -283,7 +283,7 @@ class TestUtils:
 
         mock_get.assert_called_once()
         params = parse_qs(urlsplit(mock_get.call_args.args[0]).query)
-        assert params == {"page_size": ["100"], "query": [f"archived==false;{query}"]}
+        assert params == {"page_size": ["100"], "query": [query]}
         assert result == mock_response.json.return_value
 
     @patch('topdesk_mcp._utils.requests.patch')
