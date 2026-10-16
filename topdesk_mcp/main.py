@@ -65,13 +65,22 @@ def topdesk_get_incident(incident_id: str, concise: bool = True) -> dict:
         return topdesk_client.incident.get(incident=incident_id)
 
 @mcp.tool()
-def topdesk_get_incidents_by_fiql_query(query: str) -> list:
-    """Get TOPdesk incidents by FIQL query.
+def topdesk_get_incidents_by_fiql_query(query: str, fields: str = "", page_size: int = 50, start: int = 0, sort: str = "") -> dict:
+    """Get TOPdesk incidents by FIQL query, one page per call.
 
     Parameters:
         query: The FIQL query string to filter incidents.
+        fields: Comma-separated incident fields to return, e.g. "number,briefDescription,request".
+            Empty = compact default set. "all" = complete incident objects (large, use a small page_size).
+        page_size: Incidents per call (1-500, default 50).
+        start: Offset for paging. Use 'next_start' from the previous result.
+        sort: Optional sort order, e.g. "callDate:desc" or "modificationDate:desc".
+
+    Returns a dict with 'incidents', 'count', 'more_available' and 'next_start'.
+    If more_available is true, call again with start=next_start or narrow the query.
+    Use topdesk_get_incident for the full details of a single incident.
     """
-    return topdesk_client.incident.get_list(query=query)
+    return topdesk_client.incident.get_page(query=query, fields=fields, page_size=page_size, start=start, sort=sort)
 
 @mcp.tool()
 def topdesk_get_incident_user_requests(incident_id: str) -> list:
