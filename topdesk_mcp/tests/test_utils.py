@@ -6,7 +6,8 @@ import os
 import logging
 from unittest.mock import Mock, patch, MagicMock, mock_open
 from topdesk_mcp._utils import utils
-from urllib.parse import parse_qs
+from topdesk_mcp._incident import incident
+from urllib.parse import parse_qs, urlsplit
 from markitdown import MarkItDown
 
 class TestUtils:
@@ -256,6 +257,34 @@ class TestUtils:
         )
         
         mock_get.assert_called_once()
+
+    @pytest.mark.parametrize("archived", [False, True, None])
+    @pytest.mark.parametrize("query", [None, "id!=null", "status==firstLine"])
+    @patch('topdesk_mcp._utils.requests.get')
+    def test_request_topdesk_archived_query(self, mock_get, utils_instance, archived, query):
+        """Test lowercase archived filters without changing caller queries."""
+        utils_instance.request_topdesk("/tas/api/incidents/", archived=archived, query=query)
+
+        mock_get.assert_called_once()
+        params = parse_qs(urlsplit(mock_get.call_args.args[0]).query)
+        expected_query = {False: "archived==false", True: "archived==true", None: ""}[archived]
+        if query:
+            expected_query = f"{expected_query};{query}" if expected_query else query
+        assert params == ({"query": [expected_query]} if expected_query else {})
+
+    @pytest.mark.parametrize("query", ["id!=null", "status==firstLine"])
+    @patch('topdesk_mcp._utils.requests.get')
+    def test_incident_get_list_default_archived(self, mock_get, mock_response, query):
+        """Test incident FIQL requests with the default archived argument."""
+        mock_get.return_value = mock_response
+        client = incident("https://test.topdesk.net", "credentials")
+
+        result = client.get_list(query=query)
+
+        mock_get.assert_called_once()
+        params = parse_qs(urlsplit(mock_get.call_args.args[0]).query)
+        assert params == {"page_size": ["100"], "query": [f"archived==false;{query}"]}
+        assert result == mock_response.json.return_value
 
     @patch('topdesk_mcp._utils.requests.patch')
     def test_patch_to_topdesk(self, mock_patch, utils_instance, mock_response):
