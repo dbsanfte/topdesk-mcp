@@ -71,7 +71,19 @@ class incident:
     PAGE_DEFAULT_FIELDS = ("id,number,briefDescription,status,processingStatus,caller,operator,"
                            "operatorGroup,category,subcategory,callDate,targetDate,closed,closedDate")
 
-    def get_page(self, query=None, fields=None, page_size=50, start=0, sort=None, max_chars=500000):
+    PAGE_SHORTENED_NOTE = ("Page shortened to keep the result small. "
+                           "Use fewer fields, a smaller page_size or a narrower query.")
+
+    # Size budget for one page in UTF-8 JSON bytes. FastMCP sends a dict result
+    # twice (as JSON text content and as structured content), so 500 KB per copy
+    # keeps the whole tool result below the ~1 MB that MCP clients accept.
+    PAGE_MAX_BYTES = 500000
+
+    @staticmethod
+    def _json_bytes(value):
+        return len(json.dumps(value, ensure_ascii=False).encode("utf-8"))
+
+    def get_page(self, query=None, fields=None, page_size=50, start=0, sort=None, max_bytes=PAGE_MAX_BYTES):
         """
         Retrieves a single page of incidents. Unlike get_list, it does not follow
         further pages, so the result size stays bounded.
@@ -83,9 +95,11 @@ class incident:
             page_size: Incidents per page (1-500)
             start: Offset of the first incident
             sort: Optional sort order, e.g. "callDate:desc"
-            max_chars: Size budget for the returned incidents in JSON characters.
-                The page is shortened to stay below it, but always contains at
-                least one incident so that paging makes progress.
+            max_bytes: Size budget for the whole result (incidents and envelope)
+                as UTF-8 encoded JSON. The page is shortened to stay within it,
+                but always contains at least one incident so that paging makes
+                progress; a single incident larger than the budget is returned
+                on its own.
 
         Returns:
             A dictionary with 'incidents', 'count', 'start', 'more_available' and
@@ -108,10 +122,20 @@ class incident:
         else:
             return {'error': self.utils.handle_topdesk_response(response)}
 
-        kept, size = [], 0
+        # Start with the largest possible envelope (all keys, note, widest numbers),
+        # then add each incident plus the ", " separating list items.
+        envelope = {
+            'incidents': [],
+            'count': len(incidents),
+            'start': start,
+            'more_available': True,
+            'next_start': start + len(incidents),
+            'note': self.PAGE_SHORTENED_NOTE,
+        }
+        kept, size = [], self._json_bytes(envelope)
         for item in incidents:
-            size += len(json.dumps(item, ensure_ascii=False))
-            if kept and size > max_chars:
+            size += self._json_bytes(item) + (2 if kept else 0)
+            if kept and size > max_bytes:
                 break
             kept.append(item)
         shortened = len(kept) < len(incidents)
@@ -126,8 +150,7 @@ class incident:
             'next_start': start + len(kept) if more else None,
         }
         if shortened:
-            result['note'] = ("Page shortened to keep the result small. "
-                              "Use fewer fields, a smaller page_size or a narrower query.")
+            result['note'] = self.PAGE_SHORTENED_NOTE
         return result
 
     def deescalate(self, incident, reason_id=None):

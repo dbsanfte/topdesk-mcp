@@ -19,6 +19,10 @@ def requested_params(mock_get):
     return parse_qs(urlparse(mock_get.call_args[0][0]).query)
 
 
+def result_bytes(result):
+    return len(json.dumps(result, ensure_ascii=False).encode("utf-8"))
+
+
 class TestIncidentGetPage:
     @pytest.fixture
     def incident(self):
@@ -84,17 +88,36 @@ class TestIncidentGetPage:
 
     def test_page_is_shortened_to_size_budget(self, incident):
         page = [{"number": "I%d" % i, "request": "x" * 100} for i in range(5)]
-        item_size = len(json.dumps(page[0], ensure_ascii=False))
+        max_bytes = 600
         result, _ = self.get_page(incident, make_response(200, page), query="status==secondLine",
-                                  start=10, max_chars=item_size * 2 + 1)
-        assert result['count'] == 2
+                                  start=10, max_bytes=max_bytes)
+        assert 1 <= result['count'] < 5
+        assert result_bytes(result) <= max_bytes
         assert result['more_available'] is True
-        assert result['next_start'] == 12
+        assert result['next_start'] == 10 + result['count']
         assert 'note' in result
+
+    def test_non_ascii_page_stays_within_byte_budget(self, incident):
+        # Characters outside ASCII take several bytes in UTF-8: 9,000 CJK characters
+        # are about 27 KB, so 50 of them would exceed the default budget of 500 KB.
+        page = [{"number": "I%d" % i, "request": "汉" * 9000} for i in range(50)]
+        result, _ = self.get_page(incident, make_response(206, page), query="status==secondLine")
+        assert result_bytes(result) <= _incident.incident.PAGE_MAX_BYTES
+        assert 1 <= result['count'] < 50
+        assert result['more_available'] is True
+        assert result['next_start'] == result['count']
+        assert 'note' in result
+
+    def test_full_page_within_budget_is_not_shortened(self, incident):
+        page = [{"number": "I%d" % i, "request": "ä" * 1000} for i in range(50)]
+        result, _ = self.get_page(incident, make_response(200, page), query="status==secondLine")
+        assert result['count'] == 50
+        assert result['more_available'] is False
+        assert 'note' not in result
 
     def test_oversized_first_incident_is_still_returned(self, incident):
         page = [{"number": "I1", "request": "x" * 1000}, {"number": "I2"}]
-        result, _ = self.get_page(incident, make_response(206, page), query="status==secondLine", max_chars=10)
+        result, _ = self.get_page(incident, make_response(206, page), query="status==secondLine", max_bytes=10)
         assert [i['number'] for i in result['incidents']] == ["I1"]
         assert result['next_start'] == 1
 
