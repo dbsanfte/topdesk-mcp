@@ -1,5 +1,6 @@
 from topdesk_mcp import _utils
 import re
+import json
 import logging
 import base64
 import tempfile
@@ -64,6 +65,93 @@ class incident:
                 concise_incident[field] = full_incident.get(field)
         
         return concise_incident
+
+    # Default fields for get_page: enough to identify and triage an incident while
+    # keeping a page small (a complete incident is roughly 5-6 KB of JSON).
+    PAGE_DEFAULT_FIELDS = ("id,number,briefDescription,status,processingStatus,caller,operator,"
+                           "operatorGroup,category,subcategory,callDate,targetDate,closed,closedDate")
+
+    PAGE_SHORTENED_NOTE = ("Page shortened to keep the result small. "
+                           "Use fewer fields, a smaller page_size or a narrower query.")
+
+    # Size budget for one page in UTF-8 JSON bytes. FastMCP sends a dict result
+    # twice (as JSON text content and as structured content), so 500 KB per copy
+    # keeps the whole tool result below the ~1 MB that MCP clients accept.
+    PAGE_MAX_BYTES = 500000
+
+    @staticmethod
+    def _json_bytes(value):
+        return len(json.dumps(value, ensure_ascii=False).encode("utf-8"))
+
+    def get_page(self, query=None, fields=None, page_size=50, start=0, sort=None, max_bytes=PAGE_MAX_BYTES):
+        """
+        Retrieves a single page of incidents. Unlike get_list, it does not follow
+        further pages, so the result size stays bounded.
+
+        Args:
+            query: Optional FIQL query
+            fields: Comma-separated fields to return. Empty = PAGE_DEFAULT_FIELDS,
+                "all" = complete incidents
+            page_size: Incidents per page (1-500)
+            start: Offset of the first incident
+            sort: Optional sort order, e.g. "callDate:desc"
+            max_bytes: Size budget for the whole result (incidents and envelope)
+                as UTF-8 encoded JSON. The page is shortened to stay within it,
+                but always contains at least one incident so that paging makes
+                progress; a single incident larger than the budget is returned
+                on its own.
+
+        Returns:
+            A dictionary with 'incidents', 'count', 'start', 'more_available' and
+            'next_start' (plus 'note' if the page was shortened), or with 'error'.
+        """
+        page_size = max(1, min(int(page_size), 500))
+        start = max(0, int(start))
+        params = {'start': start}
+        fields = (fields or "").replace(" ", "")
+        if fields.lower() != "all":
+            params['fields'] = fields or self.PAGE_DEFAULT_FIELDS
+        if sort:
+            params['sort'] = sort
+
+        response = self.utils.request_topdesk("/tas/api/incidents/", page_size=page_size, query=query, extended_uri=params)
+        if response.status_code == 204:
+            incidents = []
+        elif response.status_code in (200, 206):
+            incidents = response.json()
+        else:
+            return {'error': self.utils.handle_topdesk_response(response)}
+
+        # Start with the largest possible envelope (all keys, note, widest numbers),
+        # then add each incident plus the ", " separating list items.
+        envelope = {
+            'incidents': [],
+            'count': len(incidents),
+            'start': start,
+            'more_available': True,
+            'next_start': start + len(incidents),
+            'note': self.PAGE_SHORTENED_NOTE,
+        }
+        kept, size = [], self._json_bytes(envelope)
+        for item in incidents:
+            size += self._json_bytes(item) + (2 if kept else 0)
+            if kept and size > max_bytes:
+                break
+            kept.append(item)
+        shortened = len(kept) < len(incidents)
+        # 206 Partial Content: TOPdesk has more incidents after this page.
+        more = response.status_code == 206 or shortened
+
+        result = {
+            'incidents': kept,
+            'count': len(kept),
+            'start': start,
+            'more_available': more,
+            'next_start': start + len(kept) if more else None,
+        }
+        if shortened:
+            result['note'] = self.PAGE_SHORTENED_NOTE
+        return result
 
     def deescalate(self, incident, reason_id=None):
         if reason_id:
