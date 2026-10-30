@@ -321,3 +321,20 @@ class TestIncident:
         with patch('topdesk_mcp._utils.requests.get', return_value=json_response) as mock_get:
             incident.get_list(archived=True, query="status==secondLine")
         assert "archived%3D%3Dtrue%3Bstatus%3D%3DsecondLine" in mock_get.call_args[0][0]
+
+    def test_download_attachments_without_attachments_returns_empty_list(self, incident):
+        # An incident without attachments is answered with 204 No Content.
+        response = Mock()
+        response.status_code = 204
+        response.text = ''
+        with patch('topdesk_mcp._utils.requests.get', return_value=response):
+            assert incident.attachments.download_attachments("I2401-001") == []
+            assert incident.attachments.download_attachments_as_markdown("I2401-001") == []
+
+    def test_download_attachments_raises_on_error_response(self, incident):
+        response = Mock()
+        response.status_code = 404
+        response.text = 'Not Found'
+        with patch('topdesk_mcp._utils.requests.get', return_value=response):
+            with pytest.raises(RuntimeError, match="Not Found"):
+                incident.attachments.download_attachments("I2401-001")

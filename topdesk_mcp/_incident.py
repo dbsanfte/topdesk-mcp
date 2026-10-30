@@ -283,6 +283,12 @@ class incident:
 
         def download_attachments(self, incident):
             attachment_list = self.get_list(incident)
+            # 204 No Content (no attachments) is returned as the string "Success"
+            if attachment_list == "Success":
+                return []
+            # Error responses (4xx/5xx) are returned as message strings
+            if not isinstance(attachment_list, list):
+                raise RuntimeError("Could not retrieve attachments for incident {}: {}".format(incident, attachment_list))
             attachment_data_list = []
             for attachment in attachment_list:
                 attachment_json = self.utils.handle_topdesk_response(self.utils.request_topdesk(attachment['downloadUrl']))
