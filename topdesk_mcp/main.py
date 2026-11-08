@@ -359,6 +359,42 @@ def topdesk_unarchive_person(person_id: str) -> dict:
     """
     return topdesk_client.person.unarchive(person_id=person_id)
 
+#####################
+# KNOWLEDGE ITEMS
+#####################
+@mcp.tool()
+def topdesk_search_knowledge_items(search_text: str = "", query: str = "", fields: str = "", page_size: int = 20, start: int = 0, language: str = "", include_archived: bool = False) -> dict:
+    """Search TOPdesk knowledge items (read-only), one page per call.
+
+    Parameters:
+        search_text: Words that must all appear in title, description or keywords (case-insensitive).
+            The first text search loads all knowledge items and takes a few seconds; results are cached for 5 minutes.
+        query: Optional FIQL query on knowledge item fields, e.g. "news==true".
+            Title, description and keywords cannot be used in FIQL; use search_text for them.
+        fields: Comma-separated fields to return, e.g. "title,keywords". id and number are always returned
+            and must not be listed. Empty = compact default set (title, description, status, modificationDate).
+        page_size: Knowledge items per call (1-100, default 20).
+        start: Offset for paging. Use 'next_start' from the previous result.
+        language: Optional translation language, e.g. "de" or "en". Empty = default language.
+        include_archived: Whether to include archived knowledge items. Defaults to False.
+
+    Returns a dict with 'knowledge_items', 'count', 'more_available' and 'next_start'.
+    Use topdesk_get_knowledge_item for the full content of a single knowledge item.
+    """
+    return topdesk_client.knowledge_item.get_page(
+        search_text=search_text, query=query, fields=fields, page_size=page_size, start=start,
+        language=language, archived=None if include_archived else False)
+
+@mcp.tool()
+def topdesk_get_knowledge_item(knowledge_item_id: str, language: str = "") -> dict:
+    """Get a TOPdesk knowledge item including its content (read-only).
+
+    Parameters:
+        knowledge_item_id: The UUID or number of the knowledge item.
+        language: Optional translation language, e.g. "de" or "en". Empty = default language.
+    """
+    return topdesk_client.knowledge_item.get(knowledge_item=knowledge_item_id, language=language)
+
 def main():
     """Main function to run the MCP server."""
     transport = os.environ.get("TOPDESK_MCP_TRANSPORT", "stdio")

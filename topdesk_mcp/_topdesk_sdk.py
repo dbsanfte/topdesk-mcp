@@ -4,6 +4,7 @@ from topdesk_mcp import _incident
 from topdesk_mcp import _person
 from topdesk_mcp import _utils
 from topdesk_mcp import _operator
+from topdesk_mcp import _knowledge
 
 class connect:
     # Created API-version 3.0.5
@@ -21,6 +22,7 @@ class connect:
         self.supplier = self._supplier(self._topdesk_url, self._credpair)
         self.operatorgroup = self._operatorgroup(self._topdesk_url, self._credpair)
         self.operator = _operator.operator(self._topdesk_url, self._credpair)
+        self.knowledge_item = _knowledge.knowledge_item(self._topdesk_url, self._credpair)
         self.budgetholder = self._budgetholder(self._topdesk_url, self._credpair)
         self.operational_activities = self._operational_activities(self._topdesk_url, self._credpair)
         self._logger = logging.getLogger(__name__)

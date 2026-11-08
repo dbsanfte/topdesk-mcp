@@ -198,6 +198,12 @@ topdesk_mcp/  # Directory for the MCP server package
 - **topdesk_unarchive_person**  
   Unarchive a TOPdesk person.
 
+- **topdesk_search_knowledge_items**  
+  Search knowledge items, one page per call. `search_text` matches words in title, description and keywords; the Knowledge Base API cannot filter on these fields, so the server loads them for all knowledge items and filters locally (cached for 5 minutes). `query` adds a FIQL filter on other fields.
+
+- **topdesk_get_knowledge_item**  
+  Get a knowledge item by UUID or number (e.g. `KI 0908`), including its content and comments for operators, optionally in a given language.
+
 ## References
 - [MCP Protocol Documentation](https://modelcontextprotocol.io/llms-full.txt)
 - [TOPdeskPy SDK](https://github.com/TwinkelToe/TOPdeskPy)
